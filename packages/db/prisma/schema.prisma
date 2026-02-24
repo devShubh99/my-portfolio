@@ -1,0 +1,187 @@
+// ─────────────────────────────────────────────────────────────
+// Stock Portfolio Tracker — Prisma Schema
+// Database: SQLite (swap to PostgreSQL by changing provider + DATABASE_URL)
+// ─────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────
+
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum TransactionType {
+  BUY
+  SELL
+}
+
+enum AISentiment {
+  Bullish
+  Bearish
+  Neutral
+}
+
+// ─────────────────────────────────────────────────────────────
+// User — application user account with full auth fields
+// ─────────────────────────────────────────────────────────────
+model User {
+  id                 String        @id @default(cuid())
+  email              String        @unique
+  name               String?
+  passwordHash       String        @map("password_hash")
+  role               Role          @default(USER)
+  status             AccountStatus @default(ACTIVE)
+  avatarUrl          String?       @map("avatar_url")
+  failedLogins       Int           @default(0) @map("failed_logins")
+  lockedUntil        DateTime?     @map("locked_until")
+  mustChangePassword Boolean       @default(false) @map("must_change_password")
+  lastLoginAt        DateTime?     @map("last_login_at")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+
+  portfolios    Portfolio[]
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+  resetTokens   PasswordResetToken[]
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────────────────────
+// RefreshToken — JWT refresh token rotation
+// ─────────────────────────────────────────────────────────────
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  revoked   Boolean  @default(false)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
+// ─────────────────────────────────────────────────────────────
+// PasswordResetToken — time-limited password reset
+// ─────────────────────────────────────────────────────────────
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@map("password_reset_tokens")
+}
+
+// ─────────────────────────────────────────────────────────────
+// AuditLog — all auth/admin events
+// ─────────────────────────────────────────────────────────────
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?  @map("user_id")
+  action    String   // LOGIN, LOGIN_FAILED, LOGOUT, REGISTER, PASSWORD_CHANGE, PASSWORD_RESET, ADMIN_*, etc.
+  details   String?
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Portfolio — a named collection of holdings belonging to a user
+// ─────────────────────────────────────────────────────────────
+model Portfolio {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  holdings Holding[]
+
+  @@index([userId])
+  @@map("portfolios")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Holding — a single stock position within a portfolio
+// ─────────────────────────────────────────────────────────────
+model Holding {
+  id              String  @id @default(cuid())
+  portfolioId     String  @map("portfolio_id")
+  tickerSymbol    String  @map("ticker_symbol")
+  averageBuyPrice Float   @map("average_buy_price")
+  totalQuantity   Int     @map("total_quantity")
+
+  portfolio    Portfolio     @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([portfolioId])
+  @@index([tickerSymbol])
+  @@map("holdings")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Transaction — individual BUY or SELL event against a holding
+// ─────────────────────────────────────────────────────────────
+model Transaction {
+  id        String          @id @default(cuid())
+  holdingId String          @map("holding_id")
+  type      TransactionType
+  price     Float
+  quantity  Int
+  date      DateTime        @default(now())
+
+  holding Holding @relation(fields: [holdingId], references: [id], onDelete: Cascade)
+
+  @@index([holdingId])
+  @@map("transactions")
+}
+
+// ─────────────────────────────────────────────────────────────
+// AI_Insight — AI-generated analysis snapshot for a ticker
+// ─────────────────────────────────────────────────────────────
+model AIInsight {
+  id                 String      @id @default(cuid())
+  tickerSymbol       String      @map("ticker_symbol")
+  fundamentalSummary String?     @map("fundamental_summary")
+  technicalSummary   String?     @map("technical_summary")
+  aiSentiment        AISentiment @map("ai_sentiment")
+  createdAt          DateTime    @default(now()) @map("created_at")
+
+  @@index([tickerSymbol])
+  @@map("ai_insights")
+}

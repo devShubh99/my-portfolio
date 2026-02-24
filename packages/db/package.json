@@ -1,0 +1,17 @@
+{
+    "name": "@repo/db",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "generate": "prisma generate",
+        "push": "prisma db push",
+        "studio": "prisma studio",
+        "validate": "prisma validate"
+    },
+    "dependencies": {
+        "@prisma/client": "^6.4.1"
+    },
+    "devDependencies": {
+        "prisma": "^6.4.1"
+    }
+}
