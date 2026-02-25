@@ -175,6 +175,89 @@ export async function createPasswordResetToken(
     return token;
 }
 
+// ── OTP ──
+const OTP_EXPIRY_MINUTES = 10;
+const OTP_MAX_ATTEMPTS = 5;
+
+export async function generateOtp(
+    email: string,
+    type: "EMAIL_VERIFICATION" | "PASSWORD_RESET"
+): Promise<string> {
+    // Generate 6-digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedCode = await bcrypt.hash(code, BCRYPT_ROUNDS);
+
+    // Invalidate any existing unused OTPs for this email + type
+    await prisma.otpToken.updateMany({
+        where: { email: email.toLowerCase(), type, usedAt: null },
+        data: { usedAt: new Date() },
+    });
+
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + OTP_EXPIRY_MINUTES);
+
+    await prisma.otpToken.create({
+        data: {
+            email: email.toLowerCase(),
+            code: hashedCode,
+            type,
+            expiresAt,
+        },
+    });
+
+    return code;
+}
+
+export async function verifyOtp(
+    email: string,
+    code: string,
+    type: "EMAIL_VERIFICATION" | "PASSWORD_RESET"
+): Promise<{ valid: boolean; error?: string }> {
+    const otp = await prisma.otpToken.findFirst({
+        where: {
+            email: email.toLowerCase(),
+            type,
+            usedAt: null,
+        },
+        orderBy: { createdAt: "desc" },
+    });
+
+    if (!otp) {
+        return { valid: false, error: "No OTP found. Please request a new one." };
+    }
+
+    if (otp.expiresAt < new Date()) {
+        return { valid: false, error: "OTP has expired. Please request a new one." };
+    }
+
+    if (otp.attempts >= OTP_MAX_ATTEMPTS) {
+        return { valid: false, error: "Too many wrong attempts. Please request a new OTP." };
+    }
+
+    const isMatch = await bcrypt.compare(code, otp.code);
+
+    if (!isMatch) {
+        // Increment attempt counter
+        await prisma.otpToken.update({
+            where: { id: otp.id },
+            data: { attempts: { increment: 1 } },
+        });
+        const remaining = OTP_MAX_ATTEMPTS - otp.attempts - 1;
+        return {
+            valid: false,
+            error: `Invalid OTP. ${remaining} attempt${remaining !== 1 ? "s" : ""} remaining.`,
+        };
+    }
+
+    // Mark as used
+    await prisma.otpToken.update({
+        where: { id: otp.id },
+        data: { usedAt: new Date() },
+    });
+
+    return { valid: true };
+}
+
 // ── Audit Logging ──
 export async function logAuditEvent(
     action: string,

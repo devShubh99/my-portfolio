@@ -11,10 +11,10 @@ app = FastAPI(
     description="Provides historical market data, technical indicators, and AI-driven insights for NSE/BSE stocks.",
 )
 
-# ── CORS (allow Next.js frontend) ──
+# ── CORS (allow all origins for tunnel/dev access) ──
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

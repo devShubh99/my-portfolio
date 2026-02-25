@@ -55,3 +55,35 @@ export async function POST(request: Request) {
         );
     }
 }
+
+// DELETE /api/holdings — remove a holding (and its transactions)
+export async function DELETE(request: Request) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const holdingId = searchParams.get("id");
+
+        if (!holdingId) {
+            return NextResponse.json(
+                { error: "Holding ID is required" },
+                { status: 400 }
+            );
+        }
+
+        // Delete transactions first, then the holding
+        await prisma.transaction.deleteMany({
+            where: { holdingId },
+        });
+
+        await prisma.holding.delete({
+            where: { id: holdingId },
+        });
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error("[DELETE /api/holdings]", error);
+        return NextResponse.json(
+            { error: "Failed to delete holding" },
+            { status: 500 }
+        );
+    }
+}

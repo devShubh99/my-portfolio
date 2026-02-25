@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Loader2, Mail, TrendingUp, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,9 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 export default function ForgotPasswordPage() {
+    const router = useRouter();
     const [email, setEmail] = useState("");
     const [loading, setLoading] = useState(false);
-    const [sent, setSent] = useState(false);
     const [error, setError] = useState("");
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -26,14 +27,18 @@ export default function ForgotPasswordPage() {
                 body: JSON.stringify({ email }),
             });
 
+            const data = await res.json();
+
             if (!res.ok) {
-                const data = await res.json();
                 setError(data.error || "Something went wrong");
                 setLoading(false);
                 return;
             }
 
-            setSent(true);
+            // Redirect to OTP verification page
+            router.push(
+                `/verify-otp?email=${encodeURIComponent(data.email || email)}&type=PASSWORD_RESET`
+            );
         } catch {
             setError("Network error. Please try again.");
         } finally {
@@ -57,68 +62,44 @@ export default function ForgotPasswordPage() {
                     <CardHeader className="text-center">
                         <CardTitle className="text-xl">Forgot Password</CardTitle>
                         <CardDescription>
-                            Enter your email and we&apos;ll send you a reset link
+                            Enter your email and we&apos;ll send you a verification code
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {sent ? (
-                            <div className="space-y-4 text-center">
-                                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10">
-                                    <Mail className="h-6 w-6 text-emerald-400" />
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            {error && (
+                                <div className="rounded-lg border border-red-500/30 bg-red-500/5 px-4 py-3 text-sm text-red-400">
+                                    {error}
                                 </div>
-                                <div>
-                                    <p className="font-medium">Check your email</p>
-                                    <p className="mt-1 text-sm text-muted-foreground">
-                                        If an account exists for <strong>{email}</strong>, we&apos;ve sent a
-                                        password reset link.
-                                    </p>
-                                    <p className="mt-2 text-xs text-muted-foreground">
-                                        (Check the terminal console for the reset link in development mode)
-                                    </p>
-                                </div>
-                                <Link href="/login">
-                                    <Button variant="outline" className="w-full gap-2 mt-2">
-                                        <ArrowLeft className="h-4 w-4" />
-                                        Back to Login
-                                    </Button>
-                                </Link>
+                            )}
+
+                            <div className="space-y-2">
+                                <Label htmlFor="email">Email Address</Label>
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    placeholder="you@example.com"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                />
                             </div>
-                        ) : (
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                {error && (
-                                    <div className="rounded-lg border border-red-500/30 bg-red-500/5 px-4 py-3 text-sm text-red-400">
-                                        {error}
-                                    </div>
+
+                            <Button type="submit" className="w-full gap-2" disabled={loading}>
+                                {loading ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Mail className="h-4 w-4" />
                                 )}
+                                Send Verification Code
+                            </Button>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="email">Email Address</Label>
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        placeholder="you@example.com"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        required
-                                    />
-                                </div>
-
-                                <Button type="submit" className="w-full gap-2" disabled={loading}>
-                                    {loading ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <Mail className="h-4 w-4" />
-                                    )}
-                                    Send Reset Link
-                                </Button>
-
-                                <p className="text-center text-sm text-muted-foreground">
-                                    <Link href="/login" className="text-primary hover:underline">
-                                        Back to login
-                                    </Link>
-                                </p>
-                            </form>
-                        )}
+                            <p className="text-center text-sm text-muted-foreground">
+                                <Link href="/login" className="text-primary hover:underline">
+                                    Back to login
+                                </Link>
+                            </p>
+                        </form>
                     </CardContent>
                 </Card>
             </div>

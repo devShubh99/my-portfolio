@@ -1,10 +1,10 @@
 /**
  * API client for the FastAPI market-data service.
- * Base URL defaults to http://localhost:8000 (set NEXT_PUBLIC_MARKET_API_URL to override).
+ * Routes through the Next.js proxy at /api/market/* so it works
+ * identically on localhost and via ngrok.
  */
 
-const BASE_URL =
-    process.env.NEXT_PUBLIC_MARKET_API_URL || "http://localhost:8000";
+const BASE_URL = "/api/market";
 
 export interface CandleData {
     time: number;
@@ -42,7 +42,7 @@ export async function fetchHistorical(
     interval = "1d"
 ): Promise<CandleData[]> {
     const res = await fetch(
-        `${BASE_URL}/api/historical/${encodeURIComponent(ticker)}?period=${period}&interval=${interval}`
+        `${BASE_URL}/historical/${encodeURIComponent(ticker)}?period=${period}&interval=${interval}`
     );
     if (!res.ok) throw new Error(`Historical API error: ${res.status}`);
     const json = await res.json();
@@ -55,7 +55,7 @@ export async function fetchTechnicals(
     ticker: string
 ): Promise<TechnicalsResponse> {
     const res = await fetch(
-        `${BASE_URL}/api/technicals/${encodeURIComponent(ticker)}`
+        `${BASE_URL}/technicals/${encodeURIComponent(ticker)}`
     );
     if (!res.ok) throw new Error(`Technicals API error: ${res.status}`);
     const json = await res.json();
@@ -80,7 +80,7 @@ export async function fetchAIInsight(
     ticker: string
 ): Promise<AIInsightResponse> {
     const res = await fetch(
-        `${BASE_URL}/api/ai-insight/${encodeURIComponent(ticker)}`
+        `${BASE_URL}/ai-insight/${encodeURIComponent(ticker)}`
     );
     if (!res.ok) throw new Error(`AI Insight API error: ${res.status}`);
     const json = await res.json();

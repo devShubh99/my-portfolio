@@ -38,6 +38,13 @@ export default function LoginPage() {
             const data = await res.json();
 
             if (!res.ok) {
+                // If unverified email, redirect to OTP verification
+                if (data.requiresOtp && data.email) {
+                    router.push(
+                        `/verify-otp?email=${encodeURIComponent(data.email)}&type=EMAIL_VERIFICATION`
+                    );
+                    return;
+                }
                 setError(data.error || "Login failed");
                 setLoading(false);
                 return;

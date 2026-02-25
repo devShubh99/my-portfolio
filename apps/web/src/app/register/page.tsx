@@ -60,13 +60,16 @@ export default function RegisterPage() {
 
             const data = await res.json();
 
-            if (!res.ok) {
+            if (!res.ok && !data.requiresOtp) {
                 setError(data.error || "Registration failed");
                 setLoading(false);
                 return;
             }
 
-            router.push("/dashboard");
+            // Redirect to OTP verification
+            router.push(
+                `/verify-otp?email=${encodeURIComponent(data.email || email)}&type=EMAIL_VERIFICATION`
+            );
         } catch {
             setError("Network error. Please try again.");
             setLoading(false);

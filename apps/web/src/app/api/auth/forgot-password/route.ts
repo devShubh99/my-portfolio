@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { createPasswordResetToken, logAuditEvent } from "@/lib/auth";
-import { sendPasswordResetEmail } from "@/lib/mailer";
+import { generateOtp, logAuditEvent } from "@/lib/auth";
+import { sendOtpEmail } from "@/lib/mailer";
 import { checkRateLimit } from "@/lib/rate-limiter";
 
 export async function POST(req: NextRequest) {
@@ -25,24 +25,28 @@ export async function POST(req: NextRequest) {
             );
         }
 
+        const cleanEmail = email.toLowerCase().trim();
+
         // Always return success to prevent email enumeration
         const user = await prisma.user.findUnique({
-            where: { email: email.toLowerCase().trim() },
+            where: { email: cleanEmail },
         });
 
         if (user && user.status === "ACTIVE") {
-            const token = await createPasswordResetToken(user.id);
-            await sendPasswordResetEmail(user.email, token);
+            const code = await generateOtp(cleanEmail, "PASSWORD_RESET");
+            await sendOtpEmail(cleanEmail, code, "PASSWORD_RESET");
             await logAuditEvent(
-                "PASSWORD_RESET_REQUESTED",
+                "PASSWORD_RESET_OTP_SENT",
                 user.id,
-                "Password reset email sent",
+                "Password reset OTP sent",
                 ip
             );
         }
 
         return NextResponse.json({
-            message: "If an account with that email exists, a reset link has been sent.",
+            requiresOtp: true,
+            email: cleanEmail,
+            message: "If an account with that email exists, an OTP has been sent.",
         });
     } catch (error: any) {
         console.error("[Forgot Password Error]", error);

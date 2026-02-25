@@ -1,93 +1,99 @@
-# Indian Stock Market Portfolio Tracker
+# 📈 StockFolio — Indian Stock Market Portfolio Tracker
 
-A comprehensive, AI-powered portfolio tracking application built specifically for the Indian stock market (NSE/BSE). This platform allows users to manage their investments, track performance in real-time, get AI-driven insights, and features a robust Role-Based Access Control (RBAC) admin system.
+A comprehensive, AI-powered portfolio tracking application built specifically for the **Indian stock market (NSE/BSE)**. Manage your investments, track performance with live prices, get AI-driven insights, and administer users with a robust Role-Based Access Control (RBAC) system.
+
+---
 
 ## 🚀 Features
 
 ### For Users
-- **Dashboard & Analytics:** Real-time visibility into portfolio value, daily P&L, and asset allocation.
-- **Transaction Management:** Add, edit, and categorize buy/sell orders.
-- **AI Insights:** Automated portfolio analysis, risk assessment, and market correlation insights (powered by Gemini/OpenAI).
-- **Technical Analysis:** Stock charts, moving averages, and key indicators.
-- **Secure Authentication:** JWT-based login with password hashing, rate-limiting, and account lockouts to prevent brute-force attacks.
-- **Personalized Experience:** Light/Dark mode toggle with persistent preferences.
+- **Live Dashboard** — Real-time portfolio value, daily P&L, and overall performance with auto-fetched prices
+- **Portfolio Management** — Add, edit, and delete securities with persistent storage in the database
+- **Transaction Tracking** — Record buy/sell orders with full history
+- **AI Insights** — Automated portfolio analysis, sentiment scoring, and market correlation insights (Gemini/OpenAI)
+- **Technical Analysis** — Interactive stock charts, RSI, SMA-50/200, and key indicator overlays
+- **OTP Verification** — Email-based OTP for signup and password reset (SMTP via Gmail)
+- **Secure Authentication** — JWT-based login with password hashing, rate-limiting, and account lockouts
+- **Dark/Light Mode** — Persistent theme toggle
 
 ### For Administrators (RBAC)
-- **Strict Role-Based Routing:** Secure separation between `USER`, `MODERATOR`, and `ADMIN` areas.
-- **Comprehensive Admin Panel:**
-  1. **Dashboard:** High-level metrics, role distribution, and 7-day sign-up/login trends.
-  2. **User Management:** View, search, and filter users. Perform actions like manual password resets, role changes, and account suspensions.
-  3. **Bulk Actions:** Select multiple users to activate, suspend, change roles, or delete.
-  4. **Emergency Controls:** Instantly lock accounts (revokes all sessions) or force-logout specific users.
-  5. **Data Export:** Download user reports as CSV files.
-  6. **Audit Logs:** Track all critical system actions (logins, password changes, admin actions) with detailed metadata.
-  7. **Permission Matrix:** Clear visibility into exactly what each role is permitted to do.
-- **High-Security Operations:** Destructive actions (like deleting users or changing roles) require the admin to re-authenticate with their password.
+- **Admin Dashboard** — High-level metrics, role distribution, and 7-day sign-up/login trends
+- **User Management** — Search, filter, suspend, and manage users; perform manual password resets and role changes
+- **Bulk Actions** — Select multiple users for batch operations (activate, suspend, role change, delete)
+- **Emergency Controls** — Instantly lock accounts (revoke all sessions) or force-logout specific users
+- **Data Export** — Download user reports as CSV
+- **Audit Logs** — Track all critical actions (logins, password changes, admin ops) with IP & User-Agent
+- **Permission Matrix** — Clear visibility into what each role (`USER`, `MODERATOR`, `ADMIN`) can do
+
+---
 
 ## 🛠️ Tech Stack
 
-### Frontend (User & Admin)
-- **Framework:** Next.js 15 (App Router)
-- **Language:** TypeScript
-- **Styling:** Tailwind CSS + Radix UI (shadcn/ui components)
-- **Icons:** Lucide React
+| Layer | Technology |
+|---|---|
+| **Frontend** | Next.js 15 (App Router), TypeScript, Tailwind CSS, Radix UI (shadcn/ui), Lucide Icons |
+| **Backend API** | Next.js Route Handlers, Custom JWT (jose/jsonwebtoken) with refresh token rotation |
+| **Database** | SQLite (dev) / PostgreSQL (prod), Prisma ORM |
+| **Market Data** | FastAPI (Python) microservice with Yahoo Finance |
+| **AI/ML** | LangChain / LlamaIndex for AI-powered insights |
+| **Email** | Nodemailer with Gmail SMTP for OTP delivery |
+| **Monorepo** | Turborepo |
 
-### Backend (API Routes)
-- **Framework:** Next.js Route Handlers
-- **Auth:** Custom JWT implementation (jose/jsonwebtoken) with refresh token rotation
-- **Database:** SQLite (local development) / PostgreSQL (production)
-- **ORM:** Prisma
-
-### AI & Data Services (Microservice)
-- **Framework:** FastAPI (Python)
-- **LLM Integration:** LangChain / LlamaIndex
+---
 
 ## 📂 Project Structure
-
-This project uses a Turborepo monorepo structure:
 
 ```text
 my-portfolio/
 ├── apps/
-│   └── web/                 # Next.js frontend and main API backend
-│       ├── src/app/         # Next.js App Router pages (user & admin)
-│       ├── src/components/  # Reusable UI components
-│       └── src/lib/         # Auth, Prisma, and utility functions
+│   └── web/                     # Next.js frontend + API backend
+│       ├── src/app/
+│       │   ├── api/             # API routes (auth, holdings, portfolios, market proxy, user)
+│       │   ├── dashboard/       # Dashboard & Portfolio pages
+│       │   ├── admin/           # Admin panel pages
+│       │   ├── login/           # Auth pages
+│       │   ├── register/
+│       │   ├── verify-otp/      # OTP verification page
+│       │   └── forgot-password/
+│       ├── src/components/      # Reusable UI components
+│       └── src/lib/             # Auth, Prisma, mailer, API client utilities
 ├── packages/
-│   ├── db/                  # Prisma schema and migrations
-│   └── ui/                  # Shared UI components (if applicable)
+│   ├── db/                      # Prisma schema, migrations, and seed
+│   └── ui/                      # Shared UI components
 ├── services/
-│   └── market-data/         # FastAPI microservice for AI/market data
-└── ...
+│   └── market-data/             # FastAPI microservice for market data & AI insights
+│       ├── main.py
+│       ├── routers/             # API routes (historical, technicals, AI insight)
+│       └── requirements.txt
+└── turbo.json
 ```
+
+---
 
 ## ⚙️ Local Development Setup
 
-### 1. Prerequisites
-- Node.js (v18+)
-- npm or pnpm
-- Python 3.10+ (for the market data service)
+### Prerequisites
+- **Node.js** v18+
+- **npm**
+- **Python** 3.10+ (for market data service)
 
-### 2. Clone the Repository
+### 1. Clone & Install
+
 ```bash
 git clone <your-repo-url>
 cd my-portfolio
-```
-
-### 3. Install Dependencies
-```bash
 npm install
 ```
 
-### 4. Environment Configuration
-Create a `.env` file in `apps/web/.env` and `packages/db/.env` (or link them) based on `.env.example`.
+### 2. Environment Configuration
 
-Key variables required for Next.js (`apps/web/.env`):
+Create a `.env` file in the project root:
+
 ```env
-# Database
-DATABASE_URL="file:./dev.db"  # Path relative to packages/db/prisma
+# Database (path relative to packages/db/prisma/)
+DATABASE_URL="file:./dev.db"
 
-# Auth Secrets
+# Auth
 JWT_SECRET="generate-a-super-secure-64-character-string-here"
 JWT_ACCESS_EXPIRY="15m"
 JWT_REFRESH_EXPIRY="7d"
@@ -96,35 +102,110 @@ JWT_REFRESH_EXPIRY="7d"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 ```
 
-### 5. Database Setup (Prisma)
-Navigate to the DB package and run migrations:
+Create `apps/web/.env.local` for runtime configuration:
+
+```env
+# SMTP (Gmail) — for OTP emails
+MAILER_PROVIDER="smtp"
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT=587
+SMTP_USER="your-email@gmail.com"
+SMTP_PASS="your-app-password"
+SMTP_FROM="your-email@gmail.com"
+
+# Auth
+JWT_SECRET="same-secret-as-root-env"
+JWT_ACCESS_EXPIRY="15m"
+JWT_REFRESH_EXPIRY="7d"
+
+# Market data proxy (server-side)
+MARKET_DATA_API_URL="http://localhost:8000"
+```
+
+### 3. Database Setup
+
 ```bash
 cd packages/db
-npx prisma migrate dev
+npx prisma db push
 npx prisma generate
 cd ../..
 ```
 
-### 6. Run the Next.js Development Server
+### 4. Start the Next.js Dev Server
+
 ```bash
-# Start the web app (runs on localhost:3000)
-npm run dev --workspace=apps/web
+npm run dev
 ```
 
-### 7. Run the Python Microservice (Optional, for AI features)
+The app will be available at **http://localhost:3000**.
+
+### 5. Start the Market Data Service
+
 ```bash
 cd services/market-data
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 
-## 🛡️ Security Configuration overview
+This enables live stock prices, technical analysis, and AI insights.
 
-- **JWT Cookies:** Access and Refresh tokens are stored in `HttpOnly`, `Secure`, `SameSite=lax` cookies.
-- **Passwords:** Hashed using `bcryptjs`.
-- **Rate Limiting:** Protects `/login`, `/register`, and `/forgot-password` endpoints.
-- **Audit Trails:** Critical actions are logged to the `AuditLog` table with IP and User-Agent tracking.
-- **Admin Security:** Sensitive API routes utilize a centralized `requireAdmin` helper that maps specific HTTP methods to granular permissions (e.g., `PERMISSIONS.manage_roles`).
+### 6. (Optional) Expose via ngrok
+
+To access the app from another device:
+
+```bash
+ngrok http 3000
+```
+
+> **Note:** Market data is proxied through Next.js (`/api/market/*` → `localhost:8000`), so only port 3000 needs to be exposed.
+
+---
+
+## 🔑 Key Architecture Decisions
+
+### Market Data Proxy
+All market data requests are routed through a Next.js server-side proxy (`/api/market/[...path]`), which forwards to the FastAPI service on `localhost:8000`. This ensures:
+- **Consistent behavior** on localhost and remote access (ngrok)
+- **No CORS issues** — browser only talks to the Next.js server
+- **Single tunnel** — only port 3000 needs to be exposed
+
+### Portfolio Data Flow
+```
+User adds security → POST /api/holdings → Prisma → SQLite
+Dashboard loads    → GET /api/portfolios → holdings from DB → live prices via proxy
+User deletes       → DELETE /api/holdings?id=... → removed from DB permanently
+```
+
+### Authentication Flow
+```
+Register → OTP sent via email → Verify OTP → Account activated
+Login    → Email + Password → JWT access + refresh tokens (HttpOnly cookies)
+Password Reset → OTP sent via email → Verify OTP → New password set
+```
+
+---
+
+## 🛡️ Security
+
+- **JWT Cookies** — Access and refresh tokens in `HttpOnly`, `Secure`, `SameSite=lax` cookies
+- **Passwords** — Hashed with `bcryptjs`
+- **Rate Limiting** — Protects `/login`, `/register`, and `/forgot-password`
+- **OTP Protection** — 6-digit codes, 10-minute expiry, max 5 attempts
+- **Audit Trails** — All critical actions logged with IP and User-Agent
+- **Admin Security** — Destructive actions require password re-authentication
+
+---
+
+## 📋 Stock Ticker Format
+
+When adding securities to your portfolio, use the correct Yahoo Finance ticker format:
+
+| Exchange | Suffix | Example |
+|---|---|---|
+| NSE | `.NS` | `RELIANCE.NS`, `TCS.NS`, `INFY.NS` |
+| BSE | `.BO` | `RELIANCE.BO`, `TCS.BO` |
+
+---
 
 ## 📜 License
 

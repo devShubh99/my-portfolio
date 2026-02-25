@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
     Plus,
@@ -47,16 +47,6 @@ interface Holding {
     dayChangePercent: number | null;
 }
 
-/* ── Default Holdings ── */
-const DEFAULT_HOLDINGS: Holding[] = [
-    { id: "1", ticker: "RELIANCE.NS", name: "Reliance Industries", qty: 50, avgPrice: 2380, currentPrice: null, dayChangePercent: null },
-    { id: "2", ticker: "TCS.NS", name: "Tata Consultancy Services", qty: 30, avgPrice: 3550, currentPrice: null, dayChangePercent: null },
-    { id: "3", ticker: "INFY.NS", name: "Infosys", qty: 100, avgPrice: 1420, currentPrice: null, dayChangePercent: null },
-    { id: "4", ticker: "HDFCBANK.NS", name: "HDFC Bank", qty: 40, avgPrice: 1580, currentPrice: null, dayChangePercent: null },
-    { id: "5", ticker: "WIPRO.NS", name: "Wipro", qty: 200, avgPrice: 405, currentPrice: null, dayChangePercent: null },
-    { id: "6", ticker: "ICICIBANK.NS", name: "ICICI Bank", qty: 60, avgPrice: 920, currentPrice: null, dayChangePercent: null },
-];
-
 function formatCurrency(val: number) {
     return new Intl.NumberFormat("en-IN", {
         style: "currency",
@@ -73,7 +63,9 @@ const ALLOC_COLORS = [
 ];
 
 export default function PortfolioPage() {
-    const [holdings, setHoldings] = useState<Holding[]>(DEFAULT_HOLDINGS);
+    const [holdings, setHoldings] = useState<Holding[]>([]);
+    const [portfolioId, setPortfolioId] = useState<string | null>(null);
+    const [initialLoading, setInitialLoading] = useState(true);
     const [addDialogOpen, setAddDialogOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -90,17 +82,76 @@ export default function PortfolioPage() {
     const [newAvgPrice, setNewAvgPrice] = useState("");
     const [addLoading, setAddLoading] = useState(false);
 
-    // ── Fetch Prices ──
-    const fetchAllPrices = async () => {
+    // ── Load Portfolio & Holdings from DB ──
+    const loadPortfolio = useCallback(async () => {
+        try {
+            // Get current user
+            const userRes = await fetch("/api/user/profile");
+            if (!userRes.ok) return;
+            const userData = await userRes.json();
+            const userId = userData.user?.id || userData.id;
+
+            // Get portfolios for this user
+            const portfolioRes = await fetch(`/api/portfolios?userId=${userId}`);
+            if (!portfolioRes.ok) return;
+            const portfolios = await portfolioRes.json();
+
+            let portfolio = portfolios[0];
+
+            // If no portfolio, create a default one
+            if (!portfolio) {
+                const createRes = await fetch("/api/portfolios", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ userId, name: "My Portfolio" }),
+                });
+                if (createRes.ok) {
+                    portfolio = await createRes.json();
+                }
+            }
+
+            if (portfolio) {
+                setPortfolioId(portfolio.id);
+
+                // Map DB holdings to our UI format
+                const dbHoldings: Holding[] = (portfolio.holdings || []).map(
+                    (h: any) => ({
+                        id: h.id,
+                        ticker: h.tickerSymbol,
+                        name: h.tickerSymbol, // We'll use ticker as name for now
+                        qty: h.totalQuantity,
+                        avgPrice: h.averageBuyPrice,
+                        currentPrice: null,
+                        dayChangePercent: null,
+                    })
+                );
+
+                setHoldings(dbHoldings);
+
+                // Auto-fetch prices for loaded holdings
+                if (dbHoldings.length > 0) {
+                    fetchPricesForHoldings(dbHoldings);
+                }
+            }
+        } catch (error) {
+            console.error("Failed to load portfolio:", error);
+        } finally {
+            setInitialLoading(false);
+        }
+    }, []);
+
+    // ── Fetch prices for a list of holdings ──
+    const fetchPricesForHoldings = async (holdingsList: Holding[]) => {
         setLoadingPrices(true);
         const updated = await Promise.all(
-            holdings.map(async (h) => {
+            holdingsList.map(async (h) => {
                 try {
                     const quote = await fetchQuote(h.ticker);
                     return {
                         ...h,
                         currentPrice: quote?.price ?? null,
                         dayChangePercent: quote?.dayChangePercent ?? null,
+                        name: quote?.name || h.name,
                     };
                 } catch {
                     return h;
@@ -111,42 +162,77 @@ export default function PortfolioPage() {
         setLoadingPrices(false);
     };
 
+    useEffect(() => {
+        loadPortfolio();
+    }, [loadPortfolio]);
+
+    // ── Fetch Prices (manual refresh) ──
+    const fetchAllPrices = () => fetchPricesForHoldings(holdings);
+
     // ── Add Security ──
     const handleAddSecurity = async () => {
-        if (!newTicker || !newQty || !newAvgPrice) return;
+        if (!newTicker || !newQty || !newAvgPrice || !portfolioId) return;
         setAddLoading(true);
 
         const ticker = newTicker.toUpperCase();
-        let currentPrice: number | null = null;
-        let dayChangePercent: number | null = null;
 
         try {
-            const quote = await fetchQuote(ticker);
-            if (quote) {
-                currentPrice = quote.price;
-                dayChangePercent = quote.dayChangePercent;
+            // Save to database
+            const res = await fetch("/api/holdings", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    portfolioId,
+                    tickerSymbol: ticker,
+                    averageBuyPrice: parseFloat(newAvgPrice),
+                    totalQuantity: parseInt(newQty),
+                }),
+            });
+
+            if (!res.ok) {
+                console.error("Failed to add holding");
+                setAddLoading(false);
+                return;
             }
-        } catch {
-            // Price fetch failed, that's okay
+
+            const saved = await res.json();
+
+            // Fetch live price
+            let currentPrice: number | null = null;
+            let dayChangePercent: number | null = null;
+            let name = newName || ticker;
+            try {
+                const quote = await fetchQuote(ticker);
+                if (quote) {
+                    currentPrice = quote.price;
+                    dayChangePercent = quote.dayChangePercent;
+                    name = quote.name || name;
+                }
+            } catch {
+                // Price fetch failed, okay
+            }
+
+            const newHolding: Holding = {
+                id: saved.id,
+                ticker,
+                name,
+                qty: parseInt(newQty),
+                avgPrice: parseFloat(newAvgPrice),
+                currentPrice,
+                dayChangePercent,
+            };
+
+            setHoldings((prev) => [...prev, newHolding]);
+            setNewTicker("");
+            setNewName("");
+            setNewQty("");
+            setNewAvgPrice("");
+            setAddDialogOpen(false);
+        } catch (error) {
+            console.error("Failed to add security:", error);
+        } finally {
+            setAddLoading(false);
         }
-
-        const newHolding: Holding = {
-            id: Date.now().toString(),
-            ticker,
-            name: newName || ticker,
-            qty: parseInt(newQty),
-            avgPrice: parseFloat(newAvgPrice),
-            currentPrice,
-            dayChangePercent,
-        };
-
-        setHoldings((prev) => [...prev, newHolding]);
-        setNewTicker("");
-        setNewName("");
-        setNewQty("");
-        setNewAvgPrice("");
-        setAddDialogOpen(false);
-        setAddLoading(false);
     };
 
     // ── Remove Security ──
@@ -155,8 +241,15 @@ export default function PortfolioPage() {
         setDeleteDialogOpen(true);
     };
 
-    const handleDelete = () => {
+    const handleDelete = async () => {
         if (!deleteTarget) return;
+        try {
+            await fetch(`/api/holdings?id=${deleteTarget.id}`, {
+                method: "DELETE",
+            });
+        } catch (error) {
+            console.error("Failed to delete holding:", error);
+        }
         setHoldings((prev) => prev.filter((h) => h.id !== deleteTarget.id));
         setDeleteDialogOpen(false);
         setDeleteTarget(null);
@@ -169,11 +262,17 @@ export default function PortfolioPage() {
         setEditAvg(String(h.avgPrice));
     };
 
-    const saveEdit = (id: string) => {
+    const saveEdit = async (id: string) => {
+        const qty = parseInt(editQty);
+        const avgPrice = parseFloat(editAvg);
+
+        // Update in DB via PATCH-like approach (delete + recreate or use a PUT endpoint)
+        // For now, we use a simpler approach: update local state
+        // TODO: Add PUT/PATCH endpoint to holdings API
         setHoldings((prev) =>
             prev.map((h) =>
                 h.id === id
-                    ? { ...h, qty: parseInt(editQty) || h.qty, avgPrice: parseFloat(editAvg) || h.avgPrice }
+                    ? { ...h, qty: qty || h.qty, avgPrice: avgPrice || h.avgPrice }
                     : h
             )
         );
@@ -208,6 +307,14 @@ export default function PortfolioPage() {
         )
         : holdings;
 
+    if (initialLoading) {
+        return (
+            <div className="flex items-center justify-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6">
             {/* ── Header ── */}
@@ -223,7 +330,7 @@ export default function PortfolioPage() {
                         variant="outline"
                         size="sm"
                         onClick={fetchAllPrices}
-                        disabled={loadingPrices}
+                        disabled={loadingPrices || holdings.length === 0}
                         className="gap-2"
                     >
                         {loadingPrices ? (
@@ -295,9 +402,23 @@ export default function PortfolioPage() {
                         <CardContent>
                             <div className="space-y-1">
                                 {filtered.length === 0 ? (
-                                    <p className="py-8 text-center text-sm text-muted-foreground">
-                                        No securities found.
-                                    </p>
+                                    <div className="py-12 text-center">
+                                        <p className="text-sm text-muted-foreground">
+                                            {holdings.length === 0
+                                                ? "Your portfolio is empty. Add your first security to get started!"
+                                                : "No securities found."}
+                                        </p>
+                                        {holdings.length === 0 && (
+                                            <Button
+                                                onClick={() => setAddDialogOpen(true)}
+                                                className="mt-4 gap-2"
+                                                size="sm"
+                                            >
+                                                <Plus className="h-4 w-4" />
+                                                Add Security
+                                            </Button>
+                                        )}
+                                    </div>
                                 ) : (
                                     filtered.map((h) => {
                                         const pnl = h.currentPrice
@@ -320,8 +441,8 @@ export default function PortfolioPage() {
                                                         {h.dayChangePercent !== null && (
                                                             <span
                                                                 className={`inline-flex items-center gap-0.5 text-[10px] font-medium ${h.dayChangePercent >= 0
-                                                                        ? "text-emerald-400"
-                                                                        : "text-red-400"
+                                                                    ? "text-emerald-400"
+                                                                    : "text-red-400"
                                                                     }`}
                                                             >
                                                                 {h.dayChangePercent >= 0 ? (
@@ -395,8 +516,8 @@ export default function PortfolioPage() {
                                                                 <>
                                                                     <p
                                                                         className={`text-sm font-mono font-semibold ${pnl >= 0
-                                                                                ? "text-emerald-400"
-                                                                                : "text-red-400"
+                                                                            ? "text-emerald-400"
+                                                                            : "text-red-400"
                                                                             }`}
                                                                     >
                                                                         {pnl >= 0 ? "+" : ""}
@@ -462,68 +583,76 @@ export default function PortfolioPage() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            {/* Simple donut using CSS conic-gradient */}
-                            <div className="flex justify-center">
-                                <div
-                                    className="relative h-44 w-44 rounded-full"
-                                    style={{
-                                        background: totalAllocValue > 0
-                                            ? `conic-gradient(${allocations
-                                                .map((a, i) => {
-                                                    const startPct =
-                                                        (allocations
-                                                            .slice(0, i)
-                                                            .reduce((s, x) => s + x.value, 0) /
-                                                            totalAllocValue) *
-                                                        100;
-                                                    const endPct =
-                                                        (allocations
-                                                            .slice(0, i + 1)
-                                                            .reduce((s, x) => s + x.value, 0) /
-                                                            totalAllocValue) *
-                                                        100;
-                                                    return `${a.color} ${startPct}% ${endPct}%`;
-                                                })
-                                                .join(", ")})`
-                                            : "hsl(var(--muted))",
-                                    }}
-                                >
-                                    <div className="absolute inset-4 flex items-center justify-center rounded-full bg-card">
-                                        <div className="text-center">
-                                            <p className="text-lg font-bold">
-                                                {holdings.length}
-                                            </p>
-                                            <p className="text-[10px] text-muted-foreground">
-                                                Securities
-                                            </p>
+                            {holdings.length === 0 ? (
+                                <p className="py-8 text-center text-sm text-muted-foreground">
+                                    Add securities to see allocation
+                                </p>
+                            ) : (
+                                <>
+                                    {/* Simple donut using CSS conic-gradient */}
+                                    <div className="flex justify-center">
+                                        <div
+                                            className="relative h-44 w-44 rounded-full"
+                                            style={{
+                                                background: totalAllocValue > 0
+                                                    ? `conic-gradient(${allocations
+                                                        .map((a, i) => {
+                                                            const startPct =
+                                                                (allocations
+                                                                    .slice(0, i)
+                                                                    .reduce((s, x) => s + x.value, 0) /
+                                                                    totalAllocValue) *
+                                                                100;
+                                                            const endPct =
+                                                                (allocations
+                                                                    .slice(0, i + 1)
+                                                                    .reduce((s, x) => s + x.value, 0) /
+                                                                    totalAllocValue) *
+                                                                100;
+                                                            return `${a.color} ${startPct}% ${endPct}%`;
+                                                        })
+                                                        .join(", ")})`
+                                                    : "hsl(var(--muted))",
+                                            }}
+                                        >
+                                            <div className="absolute inset-4 flex items-center justify-center rounded-full bg-card">
+                                                <div className="text-center">
+                                                    <p className="text-lg font-bold">
+                                                        {holdings.length}
+                                                    </p>
+                                                    <p className="text-[10px] text-muted-foreground">
+                                                        Securities
+                                                    </p>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
 
-                            {/* Legend */}
-                            <div className="mt-5 space-y-2">
-                                {allocations.map((a) => {
-                                    const pct =
-                                        totalAllocValue > 0
-                                            ? ((a.value / totalAllocValue) * 100).toFixed(1)
-                                            : "0";
-                                    return (
-                                        <div key={a.ticker} className="flex items-center justify-between text-sm">
-                                            <div className="flex items-center gap-2">
-                                                <span
-                                                    className="h-2.5 w-2.5 rounded-full"
-                                                    style={{ backgroundColor: a.color }}
-                                                />
-                                                <span className="text-xs">{a.ticker.replace(".NS", "").replace(".BO", "")}</span>
-                                            </div>
-                                            <span className="text-xs font-mono text-muted-foreground">
-                                                {pct}%
-                                            </span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                                    {/* Legend */}
+                                    <div className="mt-5 space-y-2">
+                                        {allocations.map((a) => {
+                                            const pct =
+                                                totalAllocValue > 0
+                                                    ? ((a.value / totalAllocValue) * 100).toFixed(1)
+                                                    : "0";
+                                            return (
+                                                <div key={a.ticker} className="flex items-center justify-between text-sm">
+                                                    <div className="flex items-center gap-2">
+                                                        <span
+                                                            className="h-2.5 w-2.5 rounded-full"
+                                                            style={{ backgroundColor: a.color }}
+                                                        />
+                                                        <span className="text-xs">{a.ticker.replace(".NS", "").replace(".BO", "")}</span>
+                                                    </div>
+                                                    <span className="text-xs font-mono text-muted-foreground">
+                                                        {pct}%
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </>
+                            )}
                         </CardContent>
                     </Card>
                 </div>

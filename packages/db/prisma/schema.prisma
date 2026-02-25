@@ -39,6 +39,11 @@ enum AISentiment {
   Neutral
 }
 
+enum OtpType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
 // ─────────────────────────────────────────────────────────────
 // User — application user account with full auth fields
 // ─────────────────────────────────────────────────────────────
@@ -49,6 +54,7 @@ model User {
   passwordHash       String        @map("password_hash")
   role               Role          @default(USER)
   status             AccountStatus @default(ACTIVE)
+  emailVerified      Boolean       @default(false) @map("email_verified")
   avatarUrl          String?       @map("avatar_url")
   failedLogins       Int           @default(0) @map("failed_logins")
   lockedUntil        DateTime?     @map("locked_until")
@@ -184,4 +190,21 @@ model AIInsight {
 
   @@index([tickerSymbol])
   @@map("ai_insights")
+}
+
+// ─────────────────────────────────────────────────────────────
+// OtpToken — time-limited OTP for email verification & password reset
+// ─────────────────────────────────────────────────────────────
+model OtpToken {
+  id        String   @id @default(cuid())
+  email     String
+  code      String
+  type      OtpType
+  expiresAt DateTime @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([email, type])
+  @@map("otp_tokens")
 }
