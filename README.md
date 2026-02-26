@@ -1,18 +1,18 @@
-# 📈 StockFolio — Indian Stock Market Portfolio Tracker
+# 📈 StockFolio — Global Portfolio Tracker
 
-A comprehensive, AI-powered portfolio tracking application built specifically for the **Indian stock market (NSE/BSE)**. Manage your investments, track performance with live prices, get AI-driven insights, and administer users with a robust Role-Based Access Control (RBAC) system.
+A comprehensive, AI-powered portfolio tracking application built for **Global Markets**. Manage your investments across **Stocks (Global & Indian)**, **Currencies**, and **Commodities**. Track performance with live prices, get AI-driven insights, and administer users with a robust Role-Based Access Control (RBAC) system.
 
 ---
 
 ## 🚀 Features
 
 ### For Users
-- **Live Dashboard** — Real-time portfolio value, daily P&L, and overall performance with auto-fetched prices
-- **Market Overview** — Live tracking of NIFTY/SENSEX, global indices, top movers, sector performance, and commodities
-- **Portfolio Management** — Add, edit, and delete securities with persistent storage in the database
+- **Multi-Asset Dashboard** — Real-time tracking for Stocks, Currencies (USD/INR, etc.), and Commodities (Gold, Crude Oil)
+- **Global Market Overview** — Live tracking of major global indices (S&P 500, NASDAQ, Dow Jones) alongside Indian indices (NIFTY, SENSEX)
+- **Portfolio Management** — Add and track securities from any market supported by Yahoo Finance
 - **Transaction Tracking** — Record buy/sell orders with full history
 - **AI Insights** — Automated portfolio analysis, sentiment scoring, and market correlation insights (Gemini/OpenAI)
-- **Technical Analysis** — Interactive stock charts, RSI, SMA-50/200, and key indicator overlays
+- **Technical Analysis** — Interactive charts, RSI, SMA-50/200, and key indicator overlays for any ticker
 - **OTP Verification** — Email-based OTP for signup and password reset (SMTP via Gmail)
 - **Secure Authentication** — JWT-based login with password hashing, rate-limiting, and account lockouts
 - **Dark/Light Mode** — Persistent theme toggle
