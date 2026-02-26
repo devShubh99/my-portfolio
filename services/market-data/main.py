@@ -4,11 +4,14 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import dotenv
+
+dotenv.load_dotenv()
 
 app = FastAPI(
     title="Stock Portfolio Tracker — Market Data API",
     version="1.0.0",
-    description="Provides historical market data, technical indicators, and AI-driven insights for NSE/BSE stocks.",
+    description="Provides historical market data, technical indicators, and AI-driven insights for global market assets.",
 )
 
 # ── CORS (allow all origins for tunnel/dev access) ──
@@ -27,8 +30,10 @@ async def health_check():
 
 
 # ── Route imports ──
-from routers import historical, technicals, ai_insight
+from routers import historical, technicals, ai_insight, quote, market
 
 app.include_router(historical.router)
 app.include_router(technicals.router)
 app.include_router(ai_insight.router)
+app.include_router(quote.router)
+app.include_router(market.router)

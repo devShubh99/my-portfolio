@@ -8,6 +8,7 @@ A comprehensive, AI-powered portfolio tracking application built specifically fo
 
 ### For Users
 - **Live Dashboard** — Real-time portfolio value, daily P&L, and overall performance with auto-fetched prices
+- **Market Overview** — Live tracking of NIFTY/SENSEX, global indices, top movers, sector performance, and commodities
 - **Portfolio Management** — Add, edit, and delete securities with persistent storage in the database
 - **Transaction Tracking** — Record buy/sell orders with full history
 - **AI Insights** — Automated portfolio analysis, sentiment scoring, and market correlation insights (Gemini/OpenAI)

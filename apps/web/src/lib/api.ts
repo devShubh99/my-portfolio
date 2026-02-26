@@ -95,17 +95,119 @@ export async function fetchAIInsight(
     };
 }
 
-/** Fetch current quote for a single ticker (uses historical with 5d/1d and takes the last candle) */
+export interface QuoteData {
+    ticker: string;
+    price: number;
+    previousClose: number;
+    dayChange: number;
+    dayChangePercent: number;
+    name?: string;
+    fiftyTwoWeekHigh: number;
+    fiftyTwoWeekLow: number;
+}
+
+/** Fetch current quote for a single ticker efficiently (uses new backend endpoint) */
+export async function fetchSingleQuote(ticker: string): Promise<QuoteData | null> {
+    try {
+        const res = await fetch(`${BASE_URL}/quote/${encodeURIComponent(ticker)}`);
+        if (!res.ok) return null;
+        return await res.json();
+    } catch (e) {
+        console.error("Error fetching single quote:", e);
+        return null;
+    }
+}
+
+/** Fetch current quotes for multiple tickers in one batch request */
+export async function fetchBatchQuotes(tickers: string[]): Promise<QuoteData[]> {
+    if (!tickers || tickers.length === 0) return [];
+
+    try {
+        const res = await fetch(`${BASE_URL}/batch-quotes`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ tickers }),
+        });
+
+        if (!res.ok) return [];
+        const data = await res.json();
+        return data.quotes || [];
+    } catch (e) {
+        console.error("Error fetching batch quotes:", e);
+        return [];
+    }
+}
+
+/** Legacy signature for backward compatibility - calls the new single quote endpoint */
 export async function fetchQuote(ticker: string) {
-    const candles = await fetchHistorical(ticker, "5d", "1d");
-    if (candles.length < 2) return null;
-    const latest = candles[candles.length - 1];
-    const prev = candles[candles.length - 2];
-    const dayChange = latest.close - prev.close;
-    const dayChangePercent = (dayChange / prev.close) * 100;
+    const quote = await fetchSingleQuote(ticker);
+    if (!quote) return null;
+
     return {
-        price: latest.close,
-        dayChange,
-        dayChangePercent,
+        price: quote.price,
+        dayChange: quote.dayChange,
+        dayChangePercent: quote.dayChangePercent,
+        name: quote.name,
     };
+}
+
+export interface SearchResult {
+    ticker: string;
+    name: string;
+    exchange: string;
+    typeDisp: string;
+    // Removed price and previousClose to optimize search performance natively via Yahoo
+}
+
+// Simple in-memory cache for search results to avoid spamming the API
+// Keys are lowercase query strings, Values are the result arrays and a timestamp
+const searchCache = new Map<string, { data: SearchResult[], timestamp: number }>();
+const CACHE_TTL_MS = 60000; // 1 minute
+
+/** Fetch live search autocomplete options with prices directly */
+export async function searchSecurities(query: string): Promise<SearchResult[]> {
+    if (!query || query.length < 2) return [];
+
+    const cacheKey = query.toLowerCase().trim();
+    const cached = searchCache.get(cacheKey);
+
+    // Return cached results if they are fresh
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+        return cached.data;
+    }
+
+    try {
+        const res = await fetch(`${BASE_URL}/search?q=${encodeURIComponent(query)}`);
+        if (!res.ok) return [];
+        const data = await res.json();
+
+        const results = data.results || [];
+
+        // Save to cache
+        searchCache.set(cacheKey, { data: results, timestamp: Date.now() });
+
+        return results;
+    } catch (e) {
+        console.error("Error searching securities:", e);
+        return [];
+    }
+}
+export interface MarketMovers {
+    gainers: QuoteData[];
+    losers: QuoteData[];
+    mostActive: QuoteData[];
+}
+
+/** Fetch top market movers (gainers, losers, most active) */
+export async function fetchMarketMovers(): Promise<MarketMovers> {
+    try {
+        const res = await fetch(`${BASE_URL}/movers`);
+        if (!res.ok) throw new Error(`Movers API error: {res.status}`);
+        return await res.json();
+    } catch (e) {
+        console.error("Error fetching market movers:", e);
+        return { gainers: [], losers: [], mostActive: [] };
+    }
 }
