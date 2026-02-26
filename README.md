@@ -7,15 +7,17 @@ A comprehensive, AI-powered portfolio tracking application built for **Global Ma
 ## 🚀 Features
 
 ### For Users
+- **Landing Page** — Public-facing aesthetic landing page at `/` with live ticker strip, feature showcase, and AI spotlight.
+- **Dark / Light Mode** — Persistent theme toggle; authenticated users have their preference saved to the database and restored on every login. Default theme is dark for all users.
+- **Market Overview** — Dynamic `/dashboard/market` page with live indices, top movers, sector heatmap, and currency/commodities strip.
+- **Global Security Search** — Reusable Yahoo Finance-powered search component used across Add Security and Add Transaction flows.
 - **Multi-Asset Dashboard** — Real-time tracking for Stocks, Currencies (USD/INR, etc.), and Commodities (Gold, Crude Oil)
-- **Global Market Overview** — Live tracking of major global indices (S&P 500, NASDAQ, Dow Jones) alongside Indian indices (NIFTY, SENSEX)
 - **Portfolio Management** — Add and track securities from any market supported by Yahoo Finance
 - **Transaction Tracking** — Record buy/sell orders with full history
 - **AI Insights** — Automated portfolio analysis, sentiment scoring, and market correlation insights (Gemini/OpenAI)
 - **Technical Analysis** — Interactive charts, RSI, SMA-50/200, and key indicator overlays for any ticker
 - **OTP Verification** — Email-based OTP for signup and password reset (SMTP via Gmail)
 - **Secure Authentication** — JWT-based login with password hashing, rate-limiting, and account lockouts
-- **Dark/Light Mode** — Persistent theme toggle
 
 ### For Administrators (RBAC)
 - **Admin Dashboard** — High-level metrics, role distribution, and 7-day sign-up/login trends
@@ -33,6 +35,7 @@ A comprehensive, AI-powered portfolio tracking application built for **Global Ma
 | Layer | Technology |
 |---|---|
 | **Frontend** | Next.js 15 (App Router), TypeScript, Tailwind CSS, Radix UI (shadcn/ui), Lucide Icons |
+| **Theme System** | `next-themes` (Dark/Light persistent state) |
 | **Backend API** | Next.js Route Handlers, Custom JWT (jose/jsonwebtoken) with refresh token rotation |
 | **Database** | SQLite (dev) / PostgreSQL (prod), Prisma ORM |
 | **Market Data** | FastAPI (Python) microservice with Yahoo Finance |
@@ -57,6 +60,8 @@ my-portfolio/
 │       │   ├── verify-otp/      # OTP verification page
 │       │   └── forgot-password/
 │       ├── src/components/      # Reusable UI components
+│       │   └── landing/         # Dedicated landing page UI components
+│       ├── src/hooks/           # Custom React hooks (useInView, etc)
 │       └── src/lib/             # Auth, Prisma, mailer, API client utilities
 ├── packages/
 │   ├── db/                      # Prisma schema, migrations, and seed
@@ -194,6 +199,14 @@ Password Reset → OTP sent via email → Verify OTP → New password set
 - **OTP Protection** — 6-digit codes, 10-minute expiry, max 5 attempts
 - **Audit Trails** — All critical actions logged with IP and User-Agent
 - **Admin Security** — Destructive actions require password re-authentication
+
+---
+
+## 🌗 Theme System
+The application ships with a fully persistent Dark/Light mode engine.
+- **Default:** Dark mode out of the gate for all users to prevent flashing.
+- **Unauthenticated Visitors:** Preferences are synced to standard browser `localStorage` locally cleanly across routing.
+- **Authenticated Users:** Their theme choice saves to the database. They can log into a new device and immediately land on their stored theme! Toggle is accessible from the top Navbar / Header. 
 
 ---
 
