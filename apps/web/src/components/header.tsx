@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GlobalSearch } from "@/components/global-search";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface UserProfile {
     id: string;
@@ -31,15 +32,9 @@ interface UserProfile {
 export default function Header() {
     const router = useRouter();
     const [profileOpen, setProfileOpen] = useState(false);
-    const [isDark, setIsDark] = useState(true);
     const [user, setUser] = useState<UserProfile | null>(null);
     const [loggingOut, setLoggingOut] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
-
-    // Sync initial theme from <html> class
-    useEffect(() => {
-        setIsDark(document.documentElement.classList.contains("dark"));
-    }, []);
 
     // Fetch current user profile
     useEffect(() => {
@@ -50,12 +45,6 @@ export default function Header() {
             })
             .catch(() => { });
     }, []);
-
-    const toggleTheme = () => {
-        const next = !isDark;
-        setIsDark(next);
-        document.documentElement.classList.toggle("dark", next);
-    };
 
     const handleLogout = async () => {
         setLoggingOut(true);
@@ -88,6 +77,11 @@ export default function Header() {
 
             {/* Actions */}
             <div className="flex items-center gap-2">
+                <ThemeToggle
+                    isAuthenticated={!!user}
+                    className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                />
+
                 <Button variant="ghost" size="icon" className="relative">
                     <Bell className="h-5 w-5 text-muted-foreground" />
                     <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary animate-pulse" />
@@ -165,25 +159,6 @@ export default function Header() {
                                         </div>
                                     </Link>
                                 )}
-                                <button
-                                    onClick={toggleTheme}
-                                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
-                                >
-                                    {isDark ? (
-                                        <Moon className="h-4 w-4 text-muted-foreground" />
-                                    ) : (
-                                        <Sun className="h-4 w-4 text-amber-400" />
-                                    )}
-                                    {isDark ? "Dark Mode" : "Light Mode"}
-                                    <span
-                                        className={`ml-auto rounded px-1.5 py-0.5 text-[10px] font-medium ${isDark
-                                            ? "bg-primary/15 text-primary"
-                                            : "bg-amber-500/15 text-amber-400"
-                                            }`}
-                                    >
-                                        {isDark ? "ON" : "OFF"}
-                                    </span>
-                                </button>
                                 <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent">
                                     <HelpCircle className="h-4 w-4 text-muted-foreground" />
                                     Help & Support

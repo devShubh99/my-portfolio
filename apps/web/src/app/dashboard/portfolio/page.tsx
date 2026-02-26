@@ -294,7 +294,7 @@ export default function PortfolioPage() {
 
         // Update in DB via PATCH-like approach (delete + recreate or use a PUT endpoint)
         // For now, we use a simpler approach: update local state
-        // TODO: Add PUT/PATCH endpoint to holdings API
+        // TODO(#1): Add PUT/PATCH endpoint to holdings API
         setHoldings((prev) =>
             prev.map((h) =>
                 h.id === id

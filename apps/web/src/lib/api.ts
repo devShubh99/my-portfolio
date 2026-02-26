@@ -204,7 +204,7 @@ export interface MarketMovers {
 export async function fetchMarketMovers(): Promise<MarketMovers> {
     try {
         const res = await fetch(`${BASE_URL}/movers`);
-        if (!res.ok) throw new Error(`Movers API error: {res.status}`);
+        if (!res.ok) throw new Error(`Movers API error: ${res.status}`);
         return await res.json();
     } catch (e) {
         console.error("Error fetching market movers:", e);

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN = 60; // seconds
@@ -289,6 +290,7 @@ function OtpForm() {
 export default function VerifyOtpPage() {
     return (
         <div className="min-h-screen flex items-center justify-center bg-background p-4">
+            <ThemeToggle className="absolute top-4 right-4 rounded-full border border-border/50 bg-card/80 p-2 shadow-sm backdrop-blur transition-colors hover:bg-accent" />
             <div className="w-full max-w-md space-y-6">
                 <div className="text-center">
                     <div className="inline-flex items-center gap-2">

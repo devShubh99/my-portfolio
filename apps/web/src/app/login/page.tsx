@@ -14,9 +14,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { useTheme } from "next-themes";
 
 export default function LoginPage() {
     const router = useRouter();
+    const { setTheme } = useTheme();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -50,6 +53,10 @@ export default function LoginPage() {
                 return;
             }
 
+            if (data.user?.theme) {
+                setTheme(data.user.theme);
+            }
+
             if (data.user?.mustChangePassword) {
                 router.push("/change-password");
             } else if (data.user?.role === "ADMIN" || data.user?.role === "MODERATOR") {
@@ -65,6 +72,8 @@ export default function LoginPage() {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-background p-4">
+            <ThemeToggle className="absolute top-4 right-4 rounded-full border border-border/50 bg-card/80 p-2 shadow-sm backdrop-blur transition-colors hover:bg-accent" />
+
             <div className="w-full max-w-md space-y-6">
                 {/* Logo */}
                 <div className="text-center">

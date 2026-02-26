@@ -3,7 +3,7 @@ import yfinance as yf
 import asyncio
 from typing import List, Dict, Any
 
-router = APIRouter(prefix="/api/market", tags=["Market"])
+router = APIRouter(prefix="/api", tags=["Market"])
 
 # A representative list of major Indian stocks (Nifty 50 components)
 NIFTY_50_TICKERS = [
