@@ -9,13 +9,14 @@ import pandas_ta as ta
 import httpx
 import os
 import json
+import asyncio
 
 router = APIRouter(prefix="/api/ai-insight", tags=["AI Insights"])
 
-LLM_API_KEY = os.getenv("LLM_API_KEY", "")
+LLM_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 LLM_API_URL = os.getenv(
     "LLM_API_URL",
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
 )
 
 
@@ -26,6 +27,11 @@ class AIInsightResponse(BaseModel):
     fundamentals: dict
     technicals: dict
 
+def fetch_yf_data_sync(ticker: str):
+    stock = yf.Ticker(ticker)
+    info = stock.info
+    hist = stock.history(period="1y", interval="1d")
+    return info, hist
 
 @router.get("/{ticker}", response_model=AIInsightResponse)
 async def get_ai_insight(ticker: str):
@@ -34,9 +40,7 @@ async def get_ai_insight(ticker: str):
     and return a structured sentiment + analysis response.
     """
     try:
-        stock = yf.Ticker(ticker)
-        info = stock.info
-        hist = stock.history(period="1y", interval="1d")
+        info, hist = await asyncio.to_thread(fetch_yf_data_sync, ticker)
 
         if not info or hist.empty:
             raise HTTPException(
@@ -71,7 +75,7 @@ async def get_ai_insight(ticker: str):
         }
 
         # ── Build LLM Prompt ──
-        prompt = f"""You are a professional Indian stock market analyst.
+        prompt = f"""You are a professional global stock market analyst.
 Analyze the following data for {ticker} and provide your assessment.
 
 FUNDAMENTALS:

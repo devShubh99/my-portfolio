@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { SecuritySearchInput } from "@/components/ui/security-search-input";
+import { SearchResult } from "@/lib/api";
 
 type TransactionType = "BUY" | "SELL";
 
@@ -30,10 +32,16 @@ export default function AddTransactionDialog({
     const [price, setPrice] = useState("");
     const [quantity, setQuantity] = useState("");
     const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+    const [searchError, setSearchError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
     const totalValue =
         parseFloat(price || "0") * parseInt(quantity || "0");
+
+    const handleSelectSecurity = (result: SearchResult) => {
+        setTicker(result.ticker);
+        setSearchError(null);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -97,14 +105,17 @@ export default function AddTransactionDialog({
                     </div>
 
                     {/* Ticker */}
-                    <div className="space-y-2">
+                    <div className="space-y-2 relative">
                         <Label htmlFor="ticker">Ticker Symbol</Label>
-                        <Input
+                        <SecuritySearchInput
                             id="ticker"
-                            placeholder="e.g. RELIANCE.NS, TCS.BO"
                             value={ticker}
-                            onChange={(e) => setTicker(e.target.value.toUpperCase())}
-                            required
+                            onChange={(val) => {
+                                setTicker(val);
+                                setSearchError(null);
+                            }}
+                            onSelect={handleSelectSecurity}
+                            error={searchError}
                         />
                     </div>
 

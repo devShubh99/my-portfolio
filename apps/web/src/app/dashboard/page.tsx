@@ -23,7 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import AddTransactionDialog from "@/components/add-transaction-dialog";
-import { fetchQuote } from "@/lib/api";
+import { fetchQuote, fetchBatchQuotes } from "@/lib/api";
 
 interface HoldingRow {
     id: string;
@@ -95,62 +95,62 @@ export default function DashboardPage() {
             setHasPortfolio(true);
             const dbHoldings: DbHolding[] = portfolio.holdings;
 
-            // 3. Fetch live prices for each holding
-            const results = await Promise.allSettled(
-                dbHoldings.map(async (item) => {
-                    try {
-                        const quote = await fetchQuote(item.tickerSymbol);
-                        if (!quote) {
-                            // No price data — still show the holding
-                            return {
-                                id: item.id,
-                                ticker: item.tickerSymbol,
-                                name: item.tickerSymbol,
-                                qty: item.totalQuantity,
-                                avgPrice: item.averageBuyPrice,
-                                currentPrice: item.averageBuyPrice,
-                                dayChange: 0,
-                                pnl: 0,
-                                pnlPercent: 0,
-                            };
-                        }
-                        const pnl = (quote.price - item.averageBuyPrice) * item.totalQuantity;
-                        const pnlPercent =
-                            ((quote.price - item.averageBuyPrice) / item.averageBuyPrice) * 100;
-                        return {
-                            id: item.id,
-                            ticker: item.tickerSymbol,
-                            name: item.tickerSymbol,
-                            qty: item.totalQuantity,
-                            avgPrice: item.averageBuyPrice,
-                            currentPrice: quote.price,
-                            dayChange: quote.dayChangePercent,
-                            pnl,
-                            pnlPercent,
-                        };
-                    } catch {
-                        // Price fetch failed for this ticker — show with avg price
-                        return {
-                            id: item.id,
-                            ticker: item.tickerSymbol,
-                            name: item.tickerSymbol,
-                            qty: item.totalQuantity,
-                            avgPrice: item.averageBuyPrice,
-                            currentPrice: item.averageBuyPrice,
-                            dayChange: 0,
-                            pnl: 0,
-                            pnlPercent: 0,
-                        };
-                    }
-                })
-            );
+            // 3. Fetch live prices for each holding in one batch
+            const tickers = dbHoldings.map(h => h.tickerSymbol);
 
-            const allHoldings: HoldingRow[] = [];
-            for (const result of results) {
-                if (result.status === "fulfilled") {
-                    allHoldings.push(result.value);
+            let quotesDict: Record<string, any> = {};
+            try {
+                if (tickers.length > 0) {
+                    const batchQuotes = await fetchBatchQuotes(tickers);
+                    // Normalize keys to uppercase for robust matching
+                    quotesDict = (batchQuotes || []).reduce((acc: Record<string, any>, q: any) => {
+                        if (q && q.ticker) {
+                            acc[q.ticker.toUpperCase()] = q;
+                        }
+                        return acc;
+                    }, {} as Record<string, any>);
                 }
+            } catch (e) {
+                console.warn("Batch quote fetch failed, falling back to cached prices", e);
             }
+
+            const allHoldings: HoldingRow[] = dbHoldings.map(item => {
+                const tickerKey = item.tickerSymbol.toUpperCase();
+                const quote = quotesDict[tickerKey];
+
+                if (!quote) {
+                    // No price data — still show the holding but use avgPrice as fallback current
+                    return {
+                        id: item.id,
+                        ticker: item.tickerSymbol,
+                        name: item.tickerSymbol,
+                        qty: item.totalQuantity,
+                        avgPrice: item.averageBuyPrice,
+                        currentPrice: item.averageBuyPrice,
+                        dayChange: 0,
+                        pnl: 0,
+                        pnlPercent: 0,
+                    };
+                }
+
+                const currentPrice = quote.price || item.averageBuyPrice;
+                const pnl = (currentPrice - item.averageBuyPrice) * item.totalQuantity;
+                const pnlPercent = item.averageBuyPrice > 0
+                    ? ((currentPrice - item.averageBuyPrice) / item.averageBuyPrice) * 100
+                    : 0;
+
+                return {
+                    id: item.id,
+                    ticker: item.tickerSymbol,
+                    name: quote.name || item.tickerSymbol,
+                    qty: item.totalQuantity,
+                    avgPrice: item.averageBuyPrice,
+                    currentPrice: currentPrice,
+                    dayChange: quote.dayChangePercent || 0,
+                    pnl,
+                    pnlPercent,
+                };
+            });
 
             setHoldings(allHoldings);
             if (allHoldings.length > 0) {

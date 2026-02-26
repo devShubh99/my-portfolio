@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { SecuritySearchInput } from "@/components/ui/security-search-input";
 import {
     Dialog,
     DialogContent,
@@ -34,7 +35,7 @@ import {
     DialogDescription,
     DialogFooter,
 } from "@/components/ui/dialog";
-import { fetchQuote } from "@/lib/api";
+import { fetchQuote, fetchBatchQuotes, SearchResult } from "@/lib/api";
 
 /* ── Types ── */
 interface Holding {
@@ -81,6 +82,19 @@ export default function PortfolioPage() {
     const [newQty, setNewQty] = useState("");
     const [newAvgPrice, setNewAvgPrice] = useState("");
     const [addLoading, setAddLoading] = useState(false);
+    const [searchError, setSearchError] = useState<string | null>(null);
+
+    const handleSelectSecurity = (result: SearchResult) => {
+        setNewTicker(result.ticker);
+        setNewName(result.name);
+        setSearchError(null);
+
+        // Conflict Warning
+        const exists = holdings.find((h) => h.ticker === result.ticker);
+        if (exists) {
+            setSearchError(`${result.ticker} is already in your portfolio.`);
+        }
+    };
 
     // ── Load Portfolio & Holdings from DB ──
     const loadPortfolio = useCallback(async () => {
@@ -142,24 +156,36 @@ export default function PortfolioPage() {
 
     // ── Fetch prices for a list of holdings ──
     const fetchPricesForHoldings = async (holdingsList: Holding[]) => {
+        if (!holdingsList || holdingsList.length === 0) return;
+
         setLoadingPrices(true);
-        const updated = await Promise.all(
-            holdingsList.map(async (h) => {
-                try {
-                    const quote = await fetchQuote(h.ticker);
-                    return {
-                        ...h,
-                        currentPrice: quote?.price ?? null,
-                        dayChangePercent: quote?.dayChangePercent ?? null,
-                        name: quote?.name || h.name,
-                    };
-                } catch {
-                    return h;
-                }
-            })
-        );
-        setHoldings(updated);
-        setLoadingPrices(false);
+        const tickers = holdingsList.map((h) => h.ticker);
+
+        try {
+            const batchQuotes = await fetchBatchQuotes(tickers);
+            const quotesDict = batchQuotes.reduce((acc: Record<string, any>, q: any) => {
+                acc[q.ticker] = q;
+                return acc;
+            }, {} as Record<string, any>);
+
+            const updated = holdingsList.map((h) => {
+                const quote = quotesDict[h.ticker];
+                if (!quote) return h;
+
+                return {
+                    ...h,
+                    currentPrice: quote.price ?? null,
+                    dayChangePercent: quote.dayChangePercent ?? null,
+                    name: quote.name || h.name,
+                };
+            });
+
+            setHoldings(updated);
+        } catch (e) {
+            console.error("Failed to fetch batch prices:", e);
+        } finally {
+            setLoadingPrices(false);
+        }
     };
 
     useEffect(() => {
@@ -660,22 +686,26 @@ export default function PortfolioPage() {
 
             {/* ── Add Security Dialog ── */}
             <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-md overflow-visible">
                     <DialogHeader>
                         <DialogTitle>Add Security</DialogTitle>
                         <DialogDescription>
-                            Add a stock to your portfolio. Use NSE (.NS) or BSE (.BO) suffix.
+                            Search for any global stock, crypto, or forex asset to track.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
+                            <div className="space-y-2 relative">
                                 <Label htmlFor="add-ticker">Ticker Symbol</Label>
-                                <Input
+                                <SecuritySearchInput
                                     id="add-ticker"
-                                    placeholder="e.g. TATAMOTORS.NS"
                                     value={newTicker}
-                                    onChange={(e) => setNewTicker(e.target.value.toUpperCase())}
+                                    onChange={(val) => {
+                                        setNewTicker(val);
+                                        setSearchError(null);
+                                    }}
+                                    onSelect={handleSelectSecurity}
+                                    error={searchError}
                                 />
                             </div>
                             <div className="space-y-2">

@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { GlobalSearch } from "@/components/global-search";
 
 interface UserProfile {
     id: string;
@@ -66,7 +67,7 @@ export default function Header() {
 
     // Close dropdown on outside click
     useEffect(() => {
-        function handleClick(e: MouseEvent) {
+        function handleClickOutside(e: MouseEvent) {
             if (
                 dropdownRef.current &&
                 !dropdownRef.current.contains(e.target as Node)
@@ -74,19 +75,15 @@ export default function Header() {
                 setProfileOpen(false);
             }
         }
-        document.addEventListener("mousedown", handleClick);
-        return () => document.removeEventListener("mousedown", handleClick);
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
     return (
         <header className="flex h-16 items-center justify-between border-b bg-card/50 px-6 backdrop-blur-sm">
             {/* Search */}
             <div className="relative w-full max-w-md">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                    placeholder="Search stocks, portfolios..."
-                    className="h-9 pl-9 bg-background/50"
-                />
+                <GlobalSearch />
             </div>
 
             {/* Actions */}
@@ -129,8 +126,8 @@ export default function Header() {
                                 </p>
                                 {user?.role && user.role !== "USER" && (
                                     <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${user.role === "ADMIN"
-                                            ? "bg-red-500/10 text-red-400"
-                                            : "bg-amber-500/10 text-amber-400"
+                                        ? "bg-red-500/10 text-red-400"
+                                        : "bg-amber-500/10 text-amber-400"
                                         }`}>
                                         {user.role}
                                     </span>
@@ -180,8 +177,8 @@ export default function Header() {
                                     {isDark ? "Dark Mode" : "Light Mode"}
                                     <span
                                         className={`ml-auto rounded px-1.5 py-0.5 text-[10px] font-medium ${isDark
-                                                ? "bg-primary/15 text-primary"
-                                                : "bg-amber-500/15 text-amber-400"
+                                            ? "bg-primary/15 text-primary"
+                                            : "bg-amber-500/15 text-amber-400"
                                             }`}
                                     >
                                         {isDark ? "ON" : "OFF"}
