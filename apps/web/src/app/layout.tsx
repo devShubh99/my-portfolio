@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
   title: "StockFolio — Indian Market Portfolio Tracker",
@@ -32,9 +33,6 @@ const extensionGuardScript = `
     var s=e.reason&&(e.reason.message||e.reason.toString())||"";
     if(m(s)){e.preventDefault();}
   },true);
-  // Apply saved theme immediately to prevent flash
-  var t=localStorage.getItem("theme");
-  if(t==="light"){document.documentElement.classList.remove("dark");}
 })();
 `;
 
@@ -49,8 +47,10 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: extensionGuardScript }} />
       </head>
       <body className="min-h-screen font-sans">
-        {children}
-        <ThemeToggle />
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+          {children}
+          <ThemeToggle />
+        </ThemeProvider>
       </body>
     </html>
   );
