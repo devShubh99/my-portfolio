@@ -56,6 +56,7 @@ model User {
   status             AccountStatus @default(ACTIVE)
   emailVerified      Boolean       @default(false) @map("email_verified")
   avatarUrl          String?       @map("avatar_url")
+  theme              String        @default("dark")
   failedLogins       Int           @default(0) @map("failed_logins")
   lockedUntil        DateTime?     @map("locked_until")
   mustChangePassword Boolean       @default(false) @map("must_change_password")
