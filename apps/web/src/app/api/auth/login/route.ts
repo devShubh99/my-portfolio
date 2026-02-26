@@ -126,6 +126,7 @@ export async function POST(req: NextRequest) {
                 name: user.name,
                 role: user.role,
                 mustChangePassword: user.mustChangePassword,
+                theme: user.theme,
             },
             accessToken,
         });
