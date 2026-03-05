@@ -1,3 +1,13 @@
+/**
+ * Prisma client singleton module.
+ *
+ * Uses the globalThis cache pattern recommended by Next.js to prevent
+ * instantiating multiple PrismaClient instances during hot-reload in
+ * development. In production, a single instance is created and reused.
+ *
+ * @module lib/prisma
+ */
+
 import { PrismaClient } from "@prisma/client";
 import path from "path";
 
@@ -5,7 +15,15 @@ const globalForPrisma = globalThis as unknown as {
     prisma: PrismaClient | undefined;
 };
 
-// Resolve the database URL — default to SQLite dev.db in the packages/db/prisma directory
+/**
+ * Resolve the Prisma `datasourceUrl`.
+ *
+ * 1. If `DATABASE_URL` is set in the environment, use it directly.
+ * 2. Otherwise, fall back to an absolute path pointing at the SQLite
+ *    `dev.db` file inside `packages/db/prisma/`.
+ *
+ * @returns The database connection URL string.
+ */
 function getDatabaseUrl(): string {
     if (process.env.DATABASE_URL) {
         return process.env.DATABASE_URL;

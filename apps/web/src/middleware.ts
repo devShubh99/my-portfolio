@@ -1,3 +1,19 @@
+/**
+ * Next.js Edge Middleware — Authentication & Route Protection.
+ *
+ * Runs on every matched request before the page/API handler.
+ * Responsibilities:
+ *  1. Verify the JWT access token from cookies.
+ *  2. Redirect unauthenticated users away from protected routes.
+ *  3. Enforce RBAC — only ADMIN/MODERATOR can access `/admin/*`.
+ *  4. Redirect authenticated users away from auth pages (login, register).
+ *  5. Force users with `mustChangePassword` flag to `/change-password`.
+ *
+ * Auth API routes (`/api/auth/*`) are excluded — they handle their own auth.
+ *
+ * @module middleware
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 

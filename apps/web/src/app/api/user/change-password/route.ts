@@ -1,3 +1,12 @@
+/**
+ * Change Password API — allows authenticated users to update their password.
+ *
+ * After a successful change, all refresh tokens are revoked (forcing
+ * re-login on every device) and auth cookies are cleared.
+ *
+ * @module api/user/change-password
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import {
@@ -9,6 +18,12 @@ import {
 } from "@/lib/auth";
 import { checkPasswordStrength } from "@/lib/validators";
 
+/**
+ * Change the authenticated user's password.
+ *
+ * @param req - JSON body: `{ currentPassword, newPassword }`
+ * @returns Success message or error.
+ */
 export async function POST(req: NextRequest) {
     try {
         const auth = await getCurrentUser();

@@ -1,7 +1,24 @@
+/**
+ * Delete Account API — self-service permanent account deletion.
+ *
+ * Requires the user to confirm by typing "DELETE MY ACCOUNT" and
+ * re-entering their password. Cascades to all related data (portfolios,
+ * holdings, transactions, tokens). The audit log entry is preserved
+ * with `userId` set to null (via `onDelete: SetNull`).
+ *
+ * @module api/user/delete-account
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getCurrentUser, verifyPassword, clearAuthCookies, logAuditEvent } from "@/lib/auth";
 
+/**
+ * Permanently delete the authenticated user's account.
+ *
+ * @param req - JSON body: `{ password, confirmation: "DELETE MY ACCOUNT" }`
+ * @returns Success message or error.
+ */
 export async function DELETE(req: NextRequest) {
     try {
         const auth = await getCurrentUser();

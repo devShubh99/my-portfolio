@@ -1,7 +1,21 @@
+/**
+ * Portfolios API — create and list user portfolios.
+ *
+ * Each portfolio is a named collection of {@link Holding} records
+ * belonging to a specific user.
+ *
+ * @module api/portfolios
+ */
+
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
-// GET /api/portfolios — list all portfolios (optionally filter by userId)
+/**
+ * List all portfolios with their holdings and transactions.
+ *
+ * @param request - Query param `userId` to filter by owner (optional).
+ * @returns JSON array of portfolios, ordered by creation date (newest first).
+ */
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
@@ -27,7 +41,12 @@ export async function GET(request: Request) {
     }
 }
 
-// POST /api/portfolios — create a portfolio for a user
+/**
+ * Create a new portfolio for a user.
+ *
+ * @param request - JSON body: `{ userId, name }`
+ * @returns The created portfolio (201) with an empty holdings array.
+ */
 export async function POST(request: Request) {
     try {
         const body = await request.json();

@@ -1,7 +1,22 @@
+/**
+ * Transactions API — record and list buy/sell events.
+ *
+ * When a new transaction is created, the parent holding's
+ * `averageBuyPrice` and `totalQuantity` are automatically
+ * recalculated from the full transaction history.
+ *
+ * @module api/transactions
+ */
+
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
-// GET /api/transactions — list transactions (optionally filter by holdingId)
+/**
+ * List transactions, optionally filtered by holding.
+ *
+ * @param request - Query param `holdingId` to filter (optional).
+ * @returns JSON array of transactions, ordered by date (newest first).
+ */
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
@@ -22,7 +37,16 @@ export async function GET(request: Request) {
     }
 }
 
-// POST /api/transactions — record a new BUY or SELL transaction
+/**
+ * Record a new BUY or SELL transaction.
+ *
+ * After creation, recalculates the parent holding's aggregate fields:
+ * - `totalQuantity`: sum of BUY quantities minus sum of SELL quantities.
+ * - `averageBuyPrice`: weighted average of BUY prices (SELL excluded).
+ *
+ * @param request - JSON body: `{ holdingId, type, price, quantity, date? }`
+ * @returns The created transaction (201).
+ */
 export async function POST(request: Request) {
     try {
         const body = await request.json();

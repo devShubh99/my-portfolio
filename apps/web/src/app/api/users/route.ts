@@ -1,7 +1,19 @@
+/**
+ * Users API — public user listing and creation (legacy endpoints).
+ *
+ * These routes predate the auth system and do not require authentication.
+ * For authenticated user operations, see `/api/user/*` and `/api/admin/*`.
+ *
+ * @module api/users
+ */
+
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
-// GET /api/users — list all users
+/**
+ * List all users with their portfolios.
+ * @returns JSON array of users, ordered by creation date (newest first).
+ */
 export async function GET() {
     try {
         const users = await prisma.user.findMany({

@@ -1,7 +1,18 @@
+/**
+ * Holdings API — CRUD operations for stock positions within a portfolio.
+ *
+ * @module api/holdings
+ */
+
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
-// GET /api/holdings — list holdings (optionally filter by portfolioId)
+/**
+ * List all holdings, optionally filtered by portfolio.
+ *
+ * @param request - Incoming request. Query param `portfolioId` to filter.
+ * @returns JSON array of holdings with their transactions.
+ */
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
@@ -23,7 +34,12 @@ export async function GET(request: Request) {
     }
 }
 
-// POST /api/holdings — add a new holding to a portfolio
+/**
+ * Create a new holding in a portfolio.
+ *
+ * @param request - JSON body: `{ portfolioId, tickerSymbol, averageBuyPrice, totalQuantity }`
+ * @returns The created holding (201) or an error.
+ */
 export async function POST(request: Request) {
     try {
         const body = await request.json();
@@ -56,7 +72,12 @@ export async function POST(request: Request) {
     }
 }
 
-// DELETE /api/holdings — remove a holding (and its transactions)
+/**
+ * Delete a holding and all of its associated transactions.
+ *
+ * @param request - Query param `id` (required) — the holding ID to remove.
+ * @returns `{ success: true }` on success.
+ */
 export async function DELETE(request: Request) {
     try {
         const { searchParams } = new URL(request.url);

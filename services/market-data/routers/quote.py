@@ -1,6 +1,10 @@
-# ─────────────────────────────────────────────────────────────
-# FastAPI Router — Live Quotes (yfinance)
-# ─────────────────────────────────────────────────────────────
+"""FastAPI Router — Live Quotes (Twelve Data + yfinance fallback).
+
+Provides single-ticker quotes, batch quotes, and Yahoo Finance
+autocomplete search. Uses Twelve Data as the primary data source
+and falls back to yfinance for tickers not covered (e.g. Indian
+stocks with .NS/.BO suffixes).
+"""
 
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
@@ -16,11 +20,20 @@ router = APIRouter(
 )
 
 class BatchQuoteRequest(BaseModel):
+    """Request model for the batch-quotes endpoint."""
     tickers: List[str]
 
 TWELVE_DATA_BASE_URL = "https://api.twelvedata.com"
 
 def get_td_api_key():
+    """Retrieve the Twelve Data API key from environment variables.
+
+    Raises:
+        HTTPException(500): If TWELVE_DATA_API_KEY is not set.
+
+    Returns:
+        str: The API key.
+    """
     api_key = os.getenv("TWELVE_DATA_API_KEY")
     if not api_key:
         raise HTTPException(
@@ -148,6 +161,8 @@ async def get_batch_quotes(request: BatchQuoteRequest):
                 print(f"[DEBUG] Tickers not found by Twelve Data, trying yfinance: {missing_tickers}")
                 
                 def fetch_yf_quotes_sync(ticker_list):
+                    """Synchronous fallback — fetch quotes for tickers not found
+                    on Twelve Data using the yfinance library."""
                     yf_results = []
                     for t in ticker_list:
                         try:

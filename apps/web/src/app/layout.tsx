@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
@@ -49,7 +48,6 @@ export default function RootLayout({
       <body className="min-h-screen font-sans">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           {children}
-          <ThemeToggle />
         </ThemeProvider>
       </body>
     </html>

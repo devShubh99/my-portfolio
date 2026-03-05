@@ -1,3 +1,10 @@
+"""FastAPI Router — Market Movers (Nifty 50 Components).
+
+Samples the full Nifty 50 ticker list via yfinance batch download,
+computes daily percentage change, and returns sorted lists of top
+gainers, top losers, and most active stocks.
+"""
+
 from fastapi import APIRouter, HTTPException
 import yfinance as yf
 import asyncio
@@ -26,7 +33,8 @@ async def get_market_movers():
     """
     try:
         def fetch_movers_sync():
-            # Use yfinance download for batch fetch of 1d history
+            """Synchronous helper — batch-downloads 2-day history for all
+            Nifty 50 tickers and computes daily change percentages."""
             data = yf.download(NIFTY_50_TICKERS, period="2d", group_by='ticker', progress=False)
             
             movers_list = []
