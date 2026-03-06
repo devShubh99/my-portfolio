@@ -1,0 +1,101 @@
+# Deploy StockFolio for Free with a Real Database
+
+Deploy the full-stack StockFolio app to the public internet using free-tier services.
+
+## Deployment Stack (All Free Tier)
+
+| Service | Provider | Free Tier |
+|---|---|---|
+| **Next.js (frontend + API)** | [Vercel](https://vercel.com) | Unlimited deploys, serverless functions, global CDN |
+| **PostgreSQL Database** | [Neon](https://neon.tech) | 0.5 GB storage, always-on, branching |
+| **FastAPI (market data)** | [Render](https://render.com) | 750 hrs/month, auto-deploy from Git, spins down after 15 min inactivity |
+
+> [!IMPORTANT]
+> **Render free tier** spins down after 15 minutes of inactivity. First request after idle takes ~30–60 seconds (cold start). This is fine for a portfolio project.
+
+## User Steps Required (Manual — Outside of Code)
+
+These steps must be done by the user in a web browser:
+
+1. **Create accounts** on [Vercel](https://vercel.com), [Neon](https://neon.tech), and [Render](https://render.com) (all have GitHub login)
+2. **Neon** — Create a free PostgreSQL database and copy the connection string
+3. **Vercel** — Import the GitHub repo, set root directory to `apps/web`, configure env vars
+4. **Render** — Create a new Web Service from the repo, set root directory to `services/market-data`
+
+## Proposed Code Changes
+
+### Prisma Schema — Switch to PostgreSQL
+
+#### [MODIFY] [schema.prisma](file:///c:/Users/shubh/OneDrive/Documents/my-portfolio/packages/db/prisma/schema.prisma)
+- Change `provider = "sqlite"` → `provider = "postgresql"`
+- This is the **only** schema change needed. All models already use `cuid()`, `DateTime`, and standard types that work identically on both databases.
+
+---
+
+### Prisma Client — Remove SQLite Fallback
+
+#### [MODIFY] [prisma.ts](file:///c:/Users/shubh/OneDrive/Documents/my-portfolio/apps/web/src/lib/prisma.ts)
+- Remove the `getDatabaseUrl()` fallback that constructs a SQLite path
+- Use `env("DATABASE_URL")` directly (Vercel will inject the Neon URL)
+
+---
+
+### Next.js Config — Standalone Output for Vercel
+
+#### [MODIFY] [next.config.ts](file:///c:/Users/shubh/OneDrive/Documents/my-portfolio/apps/web/next.config.ts)
+- Add `output: "standalone"` for optimized Vercel deployment
+- Add `serverExternalPackages: ["bcryptjs"]` to handle native Node modules
+
+---
+
+### Vercel Config — Monorepo Setup
+
+#### [NEW] [vercel.json](file:///c:/Users/shubh/OneDrive/Documents/my-portfolio/vercel.json)
+- Configure the build command to generate Prisma client before `next build`
+- Set install and root directory for monorepo
+
+---
+
+### Render Config — FastAPI Deployment
+
+#### [NEW] [render.yaml](file:///c:/Users/shubh/OneDrive/Documents/my-portfolio/render.yaml)
+- Blueprint for auto-deploying the FastAPI service from the `services/market-data` directory
+- Sets `uvicorn main:app` as the start command
+
+---
+
+### Deployment Guide
+
+#### [NEW] [DEPLOYMENT.md](file:///c:/Users/shubh/OneDrive/Documents/my-portfolio/DEPLOYMENT.md)
+- Step-by-step walkthrough with screenshots-style instructions for:
+  1. Creating a Neon database
+  2. Deploying Next.js to Vercel
+  3. Deploying FastAPI to Render
+  4. Wiring environment variables between services
+
+---
+
+## Environment Variables (Production)
+
+### Vercel (Next.js)
+| Variable | Value |
+|---|---|
+| `DATABASE_URL` | Neon PostgreSQL connection string |
+| `JWT_SECRET` | Random 64+ char secret |
+| `NEXT_PUBLIC_APP_URL` | `https://your-app.vercel.app` |
+| `MARKET_DATA_API_URL` | `https://your-service.onrender.com` |
+| `MAILER_PROVIDER` | `smtp` |
+| `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` | Gmail SMTP credentials |
+
+### Render (FastAPI)
+| Variable | Value |
+|---|---|
+| `TWELVE_DATA_API_KEY` | Your Twelve Data API key |
+| `GOOGLE_API_KEY` | Google Gemini API key (optional) |
+
+## Verification Plan
+
+1. Push code changes, deploy to Vercel and Render
+2. Verify Neon database is reachable (`prisma db push` from local with prod URL)
+3. Test registration (OTP), login, portfolio CRUD on the live URL
+4. Verify market data proxy hits the Render-hosted FastAPI service
