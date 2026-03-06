@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // Stock Portfolio Tracker — Prisma Schema
-// Database: SQLite (swap to PostgreSQL by changing provider + DATABASE_URL)
+// Database: PostgreSQL (Neon free tier for production)
 // ─────────────────────────────────────────────────────────────
 
 generator client {
@@ -8,7 +8,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

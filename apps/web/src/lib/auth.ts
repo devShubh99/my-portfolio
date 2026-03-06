@@ -10,7 +10,10 @@ import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
 
 // ── Config from env ──
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
+const JWT_SECRET = process.env.JWT_SECRET
+    || (process.env.NODE_ENV === "production"
+        ? (() => { throw new Error("JWT_SECRET environment variable is required in production"); })()
+        : "dev-secret-change-me");
 const JWT_ACCESS_EXPIRY = process.env.JWT_ACCESS_EXPIRY || "15m";
 const JWT_REFRESH_EXPIRY = process.env.JWT_REFRESH_EXPIRY || "7d";
 const BCRYPT_ROUNDS = 12;
