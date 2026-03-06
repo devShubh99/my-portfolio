@@ -38,7 +38,7 @@ A comprehensive, AI-powered portfolio tracking application built for **Global Ma
 | **Theme System** | `next-themes` (Dark/Light persistent state synced to DB) |
 | **Charts** | Recharts (dashboard), Lightweight Charts (candlestick / technical analysis) |
 | **Backend API** | Next.js Route Handlers, Custom JWT (`jose` / `jsonwebtoken`) with refresh token rotation |
-| **Database** | SQLite (dev) / PostgreSQL (prod), Prisma ORM |
+| **Database** | PostgreSQL (Neon free tier), Prisma ORM |
 | **Market Data** | FastAPI (Python) microservice — Twelve Data + Yahoo Finance fallback |
 | **AI/ML** | Google Gemini API with rule-based fallback for sentiment analysis |
 | **Email** | Nodemailer with Gmail SMTP for OTP delivery |
@@ -72,8 +72,8 @@ A comprehensive, AI-powered portfolio tracking application built for **Global Ma
 └─────────┼────────────────────────────────────────────────┘
           │                          │
   ┌───────▼───────┐         ┌───────▼────────────┐
-  │   SQLite /    │         │  FastAPI Service    │
-  │  PostgreSQL   │         │  (port 8000)        │
+  │  PostgreSQL   │         │  FastAPI Service    │
+  │  (Neon)       │         │  (port 8000)        │
   │               │         │  ┌───────────────┐  │
   │  Users        │         │  │ Twelve Data   │  │
   │  Portfolios   │         │  │ Yahoo Finance │  │
@@ -87,7 +87,7 @@ A comprehensive, AI-powered portfolio tracking application built for **Global Ma
 
 **Portfolio:**
 ```
-User adds security → POST /api/holdings → Prisma → SQLite
+User adds security → POST /api/holdings → Prisma → PostgreSQL
 Dashboard loads    → GET /api/portfolios → holdings from DB → live prices via proxy
 User deletes       → DELETE /api/holdings?id=... → removed from DB permanently
 ```
@@ -169,7 +169,6 @@ my-portfolio/
 │   └── db/                           # Prisma ORM package
 │       ├── prisma/
 │       │   ├── schema.prisma         # Database schema (9 models, 6 enums)
-│       │   ├── dev.db                # SQLite dev database
 │       │   ├── seed.ts               # Database seeder (admin user)
 │       │   └── migrations/           # Prisma migration history
 │       ├── index.ts                  # Re-exports Prisma client
@@ -201,7 +200,7 @@ my-portfolio/
 
 | Variable | Description | Example |
 |---|---|---|
-| `DATABASE_URL` | Prisma connection string. SQLite for dev, PostgreSQL for prod. | `file:./dev.db` |
+| `DATABASE_URL` | Prisma PostgreSQL connection string (Neon). | `postgresql://user:pass@host/db?sslmode=require` |
 | `JWT_SECRET` | Secret key for signing JWT tokens. **Must be ≥ 64 chars in production.** | `change-this-to-a-random-64-char-secret` |
 | `JWT_ACCESS_EXPIRY` | Access token lifetime. | `15m` |
 | `JWT_REFRESH_EXPIRY` | Refresh token lifetime. | `7d` |
@@ -240,10 +239,11 @@ npm install
 cp .env.example .env
 # Edit .env — at minimum set DATABASE_URL and JWT_SECRET
 
-# 3. Set up database
+# 3. Set up database (requires a PostgreSQL instance — see DEPLOYMENT.md for Neon setup)
 cd packages/db
-npx prisma db push
+npx prisma migrate dev --name init
 npx prisma generate
+npx prisma db seed
 cd ../..
 
 # 4. Start Next.js
@@ -296,6 +296,7 @@ When adding securities, use the correct Yahoo Finance ticker format:
 ## 📚 Additional Documentation
 
 - **[SETUP.md](SETUP.md)** — Detailed setup & troubleshooting guide
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** — Deploy to Vercel + Neon + Render (free)
 - **[docs/API.md](docs/API.md)** — Complete API reference (40+ endpoints)
 
 ---
