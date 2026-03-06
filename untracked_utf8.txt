@@ -1,0 +1,17 @@
+﻿apps/web/src/app/api/user/preferences/route.ts
+apps/web/src/components/landing/ai-spotlight.tsx
+apps/web/src/components/landing/features-grid.tsx
+apps/web/src/components/landing/final-cta.tsx
+apps/web/src/components/landing/footer.tsx
+apps/web/src/components/landing/hero.tsx
+apps/web/src/components/landing/how-it-works.tsx
+apps/web/src/components/landing/market-showcase.tsx
+apps/web/src/components/landing/mock-data.ts
+apps/web/src/components/landing/navbar.tsx
+apps/web/src/components/landing/social-proof.tsx
+apps/web/src/components/landing/ticker-strip.tsx
+apps/web/src/components/theme-provider.tsx
+apps/web/src/components/ui/sheet.tsx
+apps/web/src/hooks/useInView.ts
+mods.txt
+untracked.txt

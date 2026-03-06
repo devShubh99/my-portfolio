@@ -6,9 +6,9 @@ Deploy StockFolio to the public internet using free-tier services.
 |---|---|---|
 | **Frontend + API** | [Vercel](https://vercel.com) | Next.js app (serverless) |
 | **Database** | [Neon](https://neon.tech) | PostgreSQL (0.5 GB free) |
-| **Market Data** | [Render](https://render.com) | FastAPI Python service |
+| **Market Data** | [Koyeb](https://koyeb.com) | FastAPI Python service |
 
-> **Note:** Render's free tier spins down after 15 minutes of inactivity. The first request after idle takes ~30–60 seconds (cold start). This is normal for a portfolio project.
+> **Note:** Koyeb's free tier sleeps after inactivity. The first request after idle takes ~5–10 seconds (cold start). This is normal for a portfolio project.
 
 ---
 
@@ -73,37 +73,40 @@ This creates all 9 tables in your Neon database, generates the Prisma client, an
 
 ---
 
-## Step 3: Deploy the FastAPI Service to Render
+## Step 3: Deploy the FastAPI Service to Koyeb
 
 Deploy the market data service **first**, because you need its URL for Vercel.
 
-1. Go to [render.com](https://render.com) and sign up (free)
-2. Click **"New" → "Web Service"**
-3. Connect your GitHub repo
-4. Configure the service:
+1. Go to [koyeb.com](https://koyeb.com) and sign up (free, GitHub login supported)
+2. Click **"Create App"**
+3. Select **GitHub** as the deployment method
+4. Connect your GitHub repo (`devShubh99/my-portfolio`)
+5. Configure the service:
 
 | Setting | Value |
 |---|---|
 | **Name** | `stockfolio-market-data` |
-| **Root Directory** | `services/market-data` |
-| **Runtime** | Python |
-| **Build Command** | `pip install -r requirements.txt` |
-| **Start Command** | `uvicorn main:app --host 0.0.0.0 --port $PORT` |
-| **Instance Type** | Free |
+| **Builder** | Docker |
+| **Dockerfile path** | `Dockerfile` (at repo root) |
+| **Instance type** | Free (Eco) |
+| **Port** | `8000` |
 
-5. Add environment variables under **"Environment"**:
+> The `Dockerfile` at the repo root copies from `services/market-data/` and runs `uvicorn main:app --host 0.0.0.0 --port 8000`.
+
+6. Add environment variables:
 
 | Variable | Value |
 |---|---|
 | `TWELVE_DATA_API_KEY` | Your Twelve Data API key ([sign up free](https://twelvedata.com)) |
 | `GOOGLE_API_KEY` | Your Google Gemini API key (optional — omit for rule-based analysis) |
+| `PORT` | `8000` |
 
-6. Click **"Create Web Service"**
-7. Wait for the build to complete
-8. **Copy your Render URL** — it looks like: `https://stockfolio-market-data.onrender.com`
-9. Verify it's live: visit `https://stockfolio-market-data.onrender.com/health`
-   - You should see: `{"status": "ok", "service": "market-data"}`
-   - This route is defined in `services/market-data/main.py` (`GET /health`)
+7. Click **"Deploy"**
+8. Wait for the build to complete
+9. **Copy your Koyeb URL** — it looks like: `https://stockfolio-market-data-<your-id>.koyeb.app`
+10. Verify it's live: visit `https://<your-koyeb-url>/health`
+    - You should see: `{"status": "ok", "service": "market-data"}`
+    - This route is defined in `services/market-data/main.py` (`GET /health`)
 
 ---
 
@@ -205,7 +208,7 @@ Redeploy for the change to take effect.
 | `DATABASE_URL` | ✅ | Neon dashboard |
 | `JWT_SECRET` | ✅ | Generate randomly |
 | `NEXT_PUBLIC_APP_URL` | ✅ | Your Vercel URL |
-| `MARKET_DATA_API_URL` | ✅ | Your Render URL |
+| `MARKET_DATA_API_URL` | ✅ | Your Koyeb URL |
 | `MAILER_PROVIDER` | ✅ | `console` or `smtp` |
 | `SMTP_HOST` | If SMTP | `smtp.gmail.com` |
 | `SMTP_PORT` | If SMTP | `587` |
@@ -219,12 +222,13 @@ Redeploy for the change to take effect.
 | `ACCOUNT_LOCKOUT_MINUTES` | ❌ | Defaults to `15` |
 | `STORAGE_PROVIDER` | ⚠️ | `local` won't work on Vercel (read-only FS). Use `s3` or omit avatar uploads. |
 
-### Render (FastAPI)
+### Koyeb (FastAPI)
 
 | Variable | Required | Source |
 |---|---|---|
 | `TWELVE_DATA_API_KEY` | ✅ | [twelvedata.com](https://twelvedata.com) |
 | `GOOGLE_API_KEY` | ❌ | [Google AI Studio](https://aistudio.google.com) |
+| `PORT` | ✅ | `8000` |
 
 ---
 
@@ -234,7 +238,8 @@ Redeploy for the change to take effect.
 |---|---|---|
 | Build fails with `prisma generate` error | Prisma client not generated | The `vercel.json` build command handles this. Check Vercel build logs. |
 | `JWT_SECRET environment variable is required` | Missing env var on Vercel | Add `JWT_SECRET` in Vercel → Settings → Environment Variables |
-| Market data returns 502 | Render service is cold/offline | Wait 30–60 seconds for the cold start, then retry |
+| Market data returns 502 | Koyeb service is cold/offline | Wait 5–10 seconds for the cold start, then retry |
 | `PrismaClientInitializationError` | Missing or invalid `DATABASE_URL` | Verify the Neon connection string is correct and includes `?sslmode=require` |
 | OTP not arriving | SMTP misconfigured | Check Vercel function logs. If using `console` mode, OTP is printed there. |
-| `MARKET_DATA_API_URL` pointing to localhost | Env var not updated | Set it to your Render URL: `https://your-service.onrender.com` |
+| `MARKET_DATA_API_URL` pointing to localhost | Env var not updated | Set it to your Koyeb URL: `https://your-service.koyeb.app` |
+| Koyeb build fails | Dockerfile not found | Ensure `Dockerfile` is at the repo root and pushed to `main` |
